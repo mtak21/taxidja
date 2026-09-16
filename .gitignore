@@ -1,0 +1,50 @@
+# === Dependencies ===
+node_modules/
+**/node_modules/
+
+# === Environment / secrets ===
+.env
+.env.*
+!.env.example
+
+# === Build outputs ===
+dist/
+build/
+**/dist/
+**/build/
+*.tsbuildinfo
+
+# === Expo / React Native (mobile/) ===
+.expo/
+.expo-shared/
+mobile/android/
+mobile/ios/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# === Logs ===
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === OS / Editor ===
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# === Prisma / DB ===
+*.sqlite
+*.sqlite3
+
+# === Coverage / tests ===
+coverage/
+
+# === Misc ===
+.turbo/
+.cache/

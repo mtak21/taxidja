@@ -1,0 +1,7 @@
+version: "3.9"
+
+# PostgreSQL est installé nativement sur Windows pour le développement local
+# (voir backend/.env.example). Ce fichier est un point de départ minimal,
+# à compléter plus tard si des services conteneurisés sont nécessaires
+# (ex: environnement de test, CI, ou déploiement).
+services: {}
