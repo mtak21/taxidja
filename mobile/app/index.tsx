@@ -1,21 +1,8 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useAuthStore } from '../src/store/authStore';
 
-export default function Home() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>TaxiDja</Text>
-    </View>
-  );
+export default function Index() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  return <Redirect href={isAuthenticated ? '/(app)' : '/(auth)/login'} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-});
