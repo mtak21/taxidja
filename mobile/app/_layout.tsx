@@ -25,7 +25,7 @@ export default function RootLayout() {
     }
   }, [isHydrated, isAuthenticated, user, setUser, logout]);
 
-  if (!isHydrated) {
+  if (!isHydrated || (isAuthenticated && !user)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" />

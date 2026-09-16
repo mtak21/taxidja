@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { AxiosError } from 'axios';
 import { loginRequest } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
+import { homeRouteForRole } from '../../src/utils/roleRoutes';
 
 const loginSchema = z.object({
   phone: z.string().trim().min(8, 'Numéro de téléphone invalide'),
@@ -35,7 +36,7 @@ export default function LoginScreen() {
     try {
       const { user, accessToken, refreshToken } = await loginRequest(values);
       await setSession(user, accessToken, refreshToken);
-      router.replace('/(app)');
+      router.replace(homeRouteForRole(user.role));
     } catch (error) {
       const message =
         error instanceof AxiosError ? error.response?.data?.error : undefined;

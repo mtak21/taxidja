@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { AxiosError } from 'axios';
 import { registerRequest } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
+import { homeRouteForRole } from '../../src/utils/roleRoutes';
 
 const registerSchema = z.object({
   firstName: z.string().trim().min(1, 'Prénom requis'),
@@ -41,7 +42,7 @@ export default function RegisterScreen() {
         email: values.email || undefined,
       });
       await setSession(user, accessToken, refreshToken);
-      router.replace('/(app)');
+      router.replace(homeRouteForRole(user.role));
     } catch (error) {
       const message =
         error instanceof AxiosError ? error.response?.data?.error : undefined;
