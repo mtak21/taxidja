@@ -1,9 +1,12 @@
 import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useAuthStore } from '../../src/store/authStore';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
+import { AppMap } from '../../src/components/AppMap';
+import { useLocation } from '../../src/hooks/useLocation';
 
 export default function PassengerHome() {
   const user = useAuthStore((state) => state.user);
+  const { coordinates, loading, errorMessage } = useLocation();
 
   const handleReserve = () => {
     Alert.alert('Bientôt disponible', 'La réservation de course arrive prochainement.');
@@ -13,9 +16,12 @@ export default function PassengerHome() {
     <View style={styles.container}>
       <ScreenHeader title={`Bonjour ${user?.firstName ?? ''}`} />
 
-      <View style={styles.mapPlaceholder}>
-        <Text style={styles.mapPlaceholderText}>Carte à venir</Text>
-      </View>
+      <AppMap
+        coordinates={coordinates}
+        loading={loading}
+        errorMessage={errorMessage}
+        markerTitle="Ma position"
+      />
 
       <Pressable style={styles.reserveButton} onPress={handleReserve}>
         <Text style={styles.reserveButtonText}>Réserver une course</Text>
@@ -26,15 +32,6 @@ export default function PassengerHome() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  mapPlaceholder: {
-    flex: 1,
-    margin: 16,
-    borderRadius: 12,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapPlaceholderText: { color: '#666', fontSize: 16 },
   reserveButton: {
     margin: 16,
     marginTop: 0,
