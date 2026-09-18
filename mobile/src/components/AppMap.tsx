@@ -23,8 +23,8 @@ const FALLBACK_REGION = {
 // degrade to a watermarked map like on iOS. So without a key we must avoid
 // mounting <MapView> at all on Android rather than relying on it to fail
 // gracefully.
-const hasGoogleMapsKey = Boolean(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
-const canRenderMap = Platform.OS !== 'android' || hasGoogleMapsKey;
+export const hasGoogleMapsKey = Boolean(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
+export const canRenderMap = Platform.OS !== 'android' || hasGoogleMapsKey;
 
 export function AppMap({ coordinates, loading, errorMessage, markerTitle }: AppMapProps) {
   if (loading) {

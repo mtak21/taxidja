@@ -13,6 +13,22 @@ enum UserRole {
   ADMIN
 }
 
+enum VehicleType {
+  MOTO
+  RAKCHA
+  CAR
+}
+
+enum RideStatus {
+  REQUESTED
+  SEARCHING
+  ACCEPTED
+  DRIVER_ARRIVING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id            String         @id @default(uuid())
   firstName     String
@@ -25,6 +41,7 @@ model User {
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
   driver        Driver?
+  rides         Ride[]
 }
 
 model Driver {
@@ -37,6 +54,49 @@ model Driver {
   lastLocationUpdate DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+  rides              Ride[]
+}
+
+model Ride {
+  id                   String      @id @default(uuid())
+  passengerId          String
+  passenger            User        @relation(fields: [passengerId], references: [id])
+  driverId             String?
+  driver               Driver?     @relation(fields: [driverId], references: [id])
+  vehicleId            String?
+  vehicleType          VehicleType
+  pickupLatitude       Float
+  pickupLongitude      Float
+  destinationLatitude  Float
+  destinationLongitude Float
+  pickupAddress        String?
+  destinationAddress   String?
+  distance             Float
+  estimatedDuration    Int
+  estimatedPrice       Float
+  finalPrice           Float?
+  status               RideStatus  @default(REQUESTED)
+  requestedAt          DateTime    @default(now())
+  acceptedAt           DateTime?
+  arrivingAt           DateTime?
+  startedAt            DateTime?
+  completedAt          DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@index([passengerId])
+  @@index([driverId])
+  @@index([status])
+}
+
+model PricingConfig {
+  id          String      @id @default(uuid())
+  vehicleType VehicleType @unique
+  baseFare    Float
+  pricePerKm  Float
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model RefreshToken {

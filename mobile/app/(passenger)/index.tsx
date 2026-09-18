@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { AppMap } from '../../src/components/AppMap';
@@ -9,7 +10,7 @@ export default function PassengerHome() {
   const { coordinates, loading, errorMessage } = useLocation();
 
   const handleReserve = () => {
-    Alert.alert('Bientôt disponible', 'La réservation de course arrive prochainement.');
+    router.push('/(passenger)/book');
   };
 
   return (

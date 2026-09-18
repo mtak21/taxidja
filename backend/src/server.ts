@@ -7,6 +7,7 @@ dotenv.config();
 
 import authRoutes from './routes/auth.routes';
 import driverRoutes from './routes/driver.routes';
+import rideRoutes from './routes/ride.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +22,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/auth', authRoutes);
 app.use('/driver', driverRoutes);
+app.use('/rides', rideRoutes);
 
 app.listen(PORT, () => {
   console.log(`TaxiDja backend listening on port ${PORT}`);
