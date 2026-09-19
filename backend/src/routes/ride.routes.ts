@@ -12,5 +12,8 @@ router.post('/estimate', requireRole(UserRole.PASSENGER), rideController.estimat
 router.post('/', requireRole(UserRole.PASSENGER), rideController.createRide);
 router.get('/:id', rideController.getRide);
 router.patch('/:id/cancel', requireRole(UserRole.PASSENGER), rideController.cancelRide);
+router.patch('/:id/arriving', requireRole(UserRole.DRIVER), rideController.markArriving);
+router.patch('/:id/start', requireRole(UserRole.DRIVER), rideController.startRide);
+router.patch('/:id/complete', requireRole(UserRole.DRIVER), rideController.completeRide);
 
 export default router;

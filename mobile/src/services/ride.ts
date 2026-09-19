@@ -20,11 +20,17 @@ export interface RideDriver {
   rating: number;
 }
 
+export interface RidePassenger {
+  firstName: string;
+  lastName: string;
+}
+
 export interface Ride {
   id: string;
   passengerId: string;
   driverId: string | null;
   driver: RideDriver | null;
+  passenger: RidePassenger | null;
   vehicleType: VehicleType;
   pickupLatitude: number;
   pickupLongitude: number;
@@ -70,6 +76,21 @@ export async function cancelRide(id: string): Promise<Ride> {
   return data.ride;
 }
 
+export async function markArriving(id: string): Promise<Ride> {
+  const { data } = await api.patch(`/rides/${id}/arriving`);
+  return data.ride;
+}
+
+export async function startRide(id: string): Promise<Ride> {
+  const { data } = await api.patch(`/rides/${id}/start`);
+  return data.ride;
+}
+
+export async function completeRide(id: string): Promise<Ride> {
+  const { data } = await api.patch(`/rides/${id}/complete`);
+  return data.ride;
+}
+
 /** Payload of the `ride:requested` socket event sent to a candidate driver. */
 export interface RideRequestPayload {
   rideId: string;
@@ -88,4 +109,14 @@ export interface DriverAssignedPayload {
   rideId: string;
   driver: { firstName: string; lastName: string; rating: number };
   etaMinutes: number;
+}
+
+/** Payloads of the trip-lifecycle socket events sent to the passenger. */
+export interface RideLifecyclePayload {
+  rideId: string;
+}
+
+export interface RideCompletedPayload {
+  rideId: string;
+  finalPrice: number;
 }

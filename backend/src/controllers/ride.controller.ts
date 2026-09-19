@@ -5,6 +5,7 @@ import { estimateRideSchema, createRideSchema } from '../validators/ride.validat
 import { prisma } from '../config/prisma';
 import * as rideService from '../services/ride.service';
 import * as dispatchService from '../services/dispatch.service';
+import { getIo, userRoom } from '../socket/io';
 
 function handleError(res: Response, error: unknown) {
   if (error instanceof ZodError) {
@@ -12,6 +13,16 @@ function handleError(res: Response, error: unknown) {
   }
   console.error(error);
   return res.status(500).json({ error: 'Internal server error' });
+}
+
+function handleTransitionError(res: Response, error: 'not_found' | 'not_assigned_driver' | 'invalid_transition') {
+  if (error === 'not_found') {
+    return res.status(404).json({ error: 'Ride not found' });
+  }
+  if (error === 'not_assigned_driver') {
+    return res.status(403).json({ error: 'You are not the assigned driver for this ride' });
+  }
+  return res.status(409).json({ error: 'Ride is not in a state that allows this transition' });
 }
 
 export async function estimateRide(req: Request, res: Response) {
@@ -67,12 +78,13 @@ export async function getRide(req: Request, res: Response) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
-    const { driver, ...rideFields } = ride;
+    const { driver, passenger, ...rideFields } = ride;
     const safeDriver = driver
       ? { id: driver.id, rating: driver.rating, firstName: driver.user.firstName, lastName: driver.user.lastName }
       : null;
+    const safePassenger = { firstName: passenger.firstName, lastName: passenger.lastName };
 
-    return res.status(200).json({ ride: { ...rideFields, driver: safeDriver } });
+    return res.status(200).json({ ride: { ...rideFields, driver: safeDriver, passenger: safePassenger } });
   } catch (error) {
     return handleError(res, error);
   }
@@ -90,6 +102,53 @@ export async function cancelRide(req: Request, res: Response) {
     }
 
     dispatchService.cancelSearch(req.params.id as string);
+
+    return res.status(200).json({ ride: result.ride });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function markArriving(req: Request, res: Response) {
+  try {
+    const result = await rideService.markArriving(req.params.id as string, req.user!.id);
+    if ('error' in result) {
+      return handleTransitionError(res, result.error);
+    }
+
+    getIo().to(userRoom(result.ride.passengerId)).emit('ride:arriving', { rideId: result.ride.id });
+
+    return res.status(200).json({ ride: result.ride });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function startRide(req: Request, res: Response) {
+  try {
+    const result = await rideService.startRide(req.params.id as string, req.user!.id);
+    if ('error' in result) {
+      return handleTransitionError(res, result.error);
+    }
+
+    getIo().to(userRoom(result.ride.passengerId)).emit('ride:started', { rideId: result.ride.id });
+
+    return res.status(200).json({ ride: result.ride });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function completeRide(req: Request, res: Response) {
+  try {
+    const result = await rideService.completeRide(req.params.id as string, req.user!.id);
+    if ('error' in result) {
+      return handleTransitionError(res, result.error);
+    }
+
+    getIo()
+      .to(userRoom(result.ride.passengerId))
+      .emit('ride:completed', { rideId: result.ride.id, finalPrice: result.ride.finalPrice });
 
     return res.status(200).json({ ride: result.ride });
   } catch (error) {

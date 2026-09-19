@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getRide, cancelRide, type Ride, type DriverAssignedPayload } from '../../../src/services/ride';
+import {
+  getRide,
+  cancelRide,
+  type Ride,
+  type DriverAssignedPayload,
+  type RideLifecyclePayload,
+  type RideCompletedPayload,
+} from '../../../src/services/ride';
 import { connectSocket, disconnectSocket } from '../../../src/services/socket';
 
 const STATUS_LABELS: Record<Ride['status'], string> = {
   REQUESTED: 'Recherche d\'un conducteur...',
   SEARCHING: 'Recherche d\'un conducteur...',
-  ACCEPTED: 'Conducteur trouvé',
-  DRIVER_ARRIVING: 'Le conducteur arrive',
+  ACCEPTED: 'Conducteur en route',
+  DRIVER_ARRIVING: 'Conducteur arrivé',
   IN_PROGRESS: 'Course en cours',
   COMPLETED: 'Course terminée',
   CANCELLED: 'Course annulée',
@@ -16,6 +23,9 @@ const STATUS_LABELS: Record<Ride['status'], string> = {
 
 const SEARCHING_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING'];
 const CANCELLABLE_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING'];
+// Any non-terminal status: keep the socket connected across the whole trip,
+// not just while searching, so lifecycle updates arrive without polling.
+const LIVE_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING', 'ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
 
 export default function RideStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,9 +50,9 @@ export default function RideStatusScreen() {
     loadRide();
   }, [loadRide]);
 
-  // Listen for realtime dispatch outcomes while a search is in flight — no polling.
+  // Listen for realtime dispatch and trip-lifecycle events — no polling.
   useEffect(() => {
-    if (!ride || !SEARCHING_STATUSES.includes(ride.status)) return;
+    if (!ride || !LIVE_STATUSES.includes(ride.status)) return;
 
     const socket = connectSocket();
 
@@ -52,18 +62,39 @@ export default function RideStatusScreen() {
       loadRide();
     };
 
-    const handleNoDriver = (payload: { rideId: string }) => {
+    const handleNoDriver = (payload: RideLifecyclePayload) => {
       if (payload.rideId !== id) return;
       setNoDriverMessage(true);
       loadRide();
     };
 
+    const handleArriving = (payload: RideLifecyclePayload) => {
+      if (payload.rideId !== id) return;
+      loadRide();
+    };
+
+    const handleStarted = (payload: RideLifecyclePayload) => {
+      if (payload.rideId !== id) return;
+      loadRide();
+    };
+
+    const handleCompleted = (payload: RideCompletedPayload) => {
+      if (payload.rideId !== id) return;
+      loadRide();
+    };
+
     socket.on('ride:driver_assigned', handleAssigned);
     socket.on('ride:no_driver_available', handleNoDriver);
+    socket.on('ride:arriving', handleArriving);
+    socket.on('ride:started', handleStarted);
+    socket.on('ride:completed', handleCompleted);
 
     return () => {
       socket.off('ride:driver_assigned', handleAssigned);
       socket.off('ride:no_driver_available', handleNoDriver);
+      socket.off('ride:arriving', handleArriving);
+      socket.off('ride:started', handleStarted);
+      socket.off('ride:completed', handleCompleted);
       disconnectSocket();
     };
   }, [ride?.status, id, loadRide]);
@@ -106,6 +137,7 @@ export default function RideStatusScreen() {
   }
 
   const canCancel = CANCELLABLE_STATUSES.includes(ride.status);
+  const isCompleted = ride.status === 'COMPLETED';
 
   return (
     <View style={styles.container}>
@@ -123,7 +155,9 @@ export default function RideStatusScreen() {
             {ride.driver.firstName} {ride.driver.lastName}
           </Text>
           <Text style={styles.detailText}>Note : {ride.driver.rating.toFixed(1)} / 5</Text>
-          {etaMinutes !== null && <Text style={styles.detailText}>Arrivée estimée : {etaMinutes} min</Text>}
+          {etaMinutes !== null && !isCompleted && (
+            <Text style={styles.detailText}>Arrivée estimée : {etaMinutes} min</Text>
+          )}
         </View>
       )}
 
@@ -131,7 +165,11 @@ export default function RideStatusScreen() {
         {ride.destinationAddress && <Text style={styles.detailText}>Destination : {ride.destinationAddress}</Text>}
         <Text style={styles.detailText}>Distance : {ride.distance} km</Text>
         <Text style={styles.detailText}>Durée estimée : {ride.estimatedDuration} min</Text>
-        <Text style={styles.priceText}>{ride.estimatedPrice} FCFA</Text>
+        {isCompleted && ride.finalPrice !== null ? (
+          <Text style={styles.priceText}>{ride.finalPrice} FCFA (prix final)</Text>
+        ) : (
+          <Text style={styles.priceText}>{ride.estimatedPrice} FCFA</Text>
+        )}
       </View>
 
       {canCancel && (

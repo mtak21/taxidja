@@ -53,6 +53,7 @@ model Driver {
   onlineStatus       Boolean   @default(false)
   lastLocationUpdate DateTime?
   rating             Float     @default(5.0)
+  totalTrips         Int       @default(0)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   rides              Ride[]
