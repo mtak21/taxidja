@@ -1,19 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
+import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { AppMap } from '../../src/components/AppMap';
+import { RideRequestModal } from '../../src/components/RideRequestModal';
 import { useLocation } from '../../src/hooks/useLocation';
 import { useDriverLocationTracking } from '../../src/hooks/useDriverLocationTracking';
 import { updateDriverStatus } from '../../src/services/driver';
+import { connectSocket, disconnectSocket } from '../../src/services/socket';
+import type { RideRequestPayload } from '../../src/services/ride';
 
 export default function DriverHome() {
   const user = useAuthStore((state) => state.user);
   const { coordinates, loading, errorMessage } = useLocation();
   const [isOnline, setIsOnline] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [pendingRequest, setPendingRequest] = useState<RideRequestPayload | null>(null);
 
   useDriverLocationTracking(isOnline, (message) => Alert.alert('Suivi de position', message));
+
+  useEffect(() => {
+    if (!isOnline) {
+      setPendingRequest(null);
+      return;
+    }
+
+    const socket = connectSocket();
+    const handleRequested = (payload: RideRequestPayload) => setPendingRequest(payload);
+    socket.on('ride:requested', handleRequested);
+
+    return () => {
+      socket.off('ride:requested', handleRequested);
+      disconnectSocket();
+    };
+  }, [isOnline]);
 
   const handleToggle = async (value: boolean) => {
     setIsUpdatingStatus(true);
@@ -25,6 +46,20 @@ export default function DriverHome() {
     } finally {
       setIsUpdatingStatus(false);
     }
+  };
+
+  const handleAccept = () => {
+    if (!pendingRequest) return;
+    connectSocket().emit('ride:accepted', { rideId: pendingRequest.rideId });
+    const rideId = pendingRequest.rideId;
+    setPendingRequest(null);
+    router.push(`/(driver)/ride/${rideId}`);
+  };
+
+  const handleReject = () => {
+    if (!pendingRequest) return;
+    connectSocket().emit('ride:rejected', { rideId: pendingRequest.rideId });
+    setPendingRequest(null);
   };
 
   return (
@@ -46,8 +81,12 @@ export default function DriverHome() {
       </View>
 
       <View style={styles.requestsPlaceholder}>
-        <Text style={styles.requestsPlaceholderText}>Aucune demande pour le moment</Text>
+        <Text style={styles.requestsPlaceholderText}>
+          {isOnline ? 'En attente de demandes...' : 'Aucune demande pour le moment'}
+        </Text>
       </View>
+
+      <RideRequestModal request={pendingRequest} onAccept={handleAccept} onReject={handleReject} />
     </View>
   );
 }

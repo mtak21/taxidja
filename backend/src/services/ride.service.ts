@@ -40,7 +40,10 @@ export async function createRide(params: CreateRideParams) {
 }
 
 export async function getRideById(id: string) {
-  return prisma.ride.findUnique({ where: { id } });
+  return prisma.ride.findUnique({
+    where: { id },
+    include: { driver: { include: { user: true } } },
+  });
 }
 
 const CANCELLABLE_STATUSES: RideStatus[] = [RideStatus.REQUESTED, RideStatus.SEARCHING];

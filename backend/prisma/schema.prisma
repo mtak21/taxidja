@@ -52,9 +52,24 @@ model Driver {
   currentLongitude   Float?
   onlineStatus       Boolean   @default(false)
   lastLocationUpdate DateTime?
+  rating             Float     @default(5.0)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   rides              Ride[]
+  vehicles           Vehicle[]
+}
+
+model Vehicle {
+  id        String      @id @default(uuid())
+  driverId  String
+  driver    Driver      @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  type      VehicleType
+  plate     String?
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([driverId])
 }
 
 model Ride {

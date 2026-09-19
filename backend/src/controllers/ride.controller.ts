@@ -4,6 +4,7 @@ import { UserRole } from '@prisma/client';
 import { estimateRideSchema, createRideSchema } from '../validators/ride.validator';
 import { prisma } from '../config/prisma';
 import * as rideService from '../services/ride.service';
+import * as dispatchService from '../services/dispatch.service';
 
 function handleError(res: Response, error: unknown) {
   if (error instanceof ZodError) {
@@ -34,6 +35,11 @@ export async function createRide(req: Request, res: Response) {
       pickupAddress: input.pickupAddress,
       destinationAddress: input.destinationAddress,
     });
+
+    dispatchService.startSearch(ride.id).catch((error) => {
+      console.error(`Dispatch search failed for ride ${ride.id}:`, error);
+    });
+
     return res.status(201).json({ ride });
   } catch (error) {
     return handleError(res, error);
@@ -61,7 +67,12 @@ export async function getRide(req: Request, res: Response) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
-    return res.status(200).json({ ride });
+    const { driver, ...rideFields } = ride;
+    const safeDriver = driver
+      ? { id: driver.id, rating: driver.rating, firstName: driver.user.firstName, lastName: driver.user.lastName }
+      : null;
+
+    return res.status(200).json({ ride: { ...rideFields, driver: safeDriver } });
   } catch (error) {
     return handleError(res, error);
   }
@@ -77,6 +88,8 @@ export async function cancelRide(req: Request, res: Response) {
     if (result.error === 'not_cancellable') {
       return res.status(409).json({ error: 'Ride can no longer be cancelled' });
     }
+
+    dispatchService.cancelSearch(req.params.id as string);
 
     return res.status(200).json({ ride: result.ride });
   } catch (error) {

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getRide, cancelRide, type Ride } from '../../../src/services/ride';
+import { getRide, cancelRide, type Ride, type DriverAssignedPayload } from '../../../src/services/ride';
+import { connectSocket, disconnectSocket } from '../../../src/services/socket';
 
 const STATUS_LABELS: Record<Ride['status'], string> = {
   REQUESTED: 'Recherche d\'un conducteur...',
@@ -13,6 +14,7 @@ const STATUS_LABELS: Record<Ride['status'], string> = {
   CANCELLED: 'Course annulée',
 };
 
+const SEARCHING_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING'];
 const CANCELLABLE_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING'];
 
 export default function RideStatusScreen() {
@@ -20,6 +22,8 @@ export default function RideStatusScreen() {
   const [ride, setRide] = useState<Ride | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
+  const [noDriverMessage, setNoDriverMessage] = useState(false);
 
   const loadRide = useCallback(async () => {
     try {
@@ -35,6 +39,34 @@ export default function RideStatusScreen() {
   useEffect(() => {
     loadRide();
   }, [loadRide]);
+
+  // Listen for realtime dispatch outcomes while a search is in flight — no polling.
+  useEffect(() => {
+    if (!ride || !SEARCHING_STATUSES.includes(ride.status)) return;
+
+    const socket = connectSocket();
+
+    const handleAssigned = (payload: DriverAssignedPayload) => {
+      if (payload.rideId !== id) return;
+      setEtaMinutes(payload.etaMinutes);
+      loadRide();
+    };
+
+    const handleNoDriver = (payload: { rideId: string }) => {
+      if (payload.rideId !== id) return;
+      setNoDriverMessage(true);
+      loadRide();
+    };
+
+    socket.on('ride:driver_assigned', handleAssigned);
+    socket.on('ride:no_driver_available', handleNoDriver);
+
+    return () => {
+      socket.off('ride:driver_assigned', handleAssigned);
+      socket.off('ride:no_driver_available', handleNoDriver);
+      disconnectSocket();
+    };
+  }, [ride?.status, id, loadRide]);
 
   const handleCancel = () => {
     Alert.alert('Annuler la course ?', 'Cette action est irréversible.', [
@@ -78,11 +110,22 @@ export default function RideStatusScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.statusBox}>
-        {(ride.status === 'REQUESTED' || ride.status === 'SEARCHING') && (
-          <ActivityIndicator size="large" style={styles.spinner} />
-        )}
+        {SEARCHING_STATUSES.includes(ride.status) && <ActivityIndicator size="large" style={styles.spinner} />}
         <Text style={styles.statusText}>{STATUS_LABELS[ride.status]}</Text>
+        {ride.status === 'CANCELLED' && noDriverMessage && (
+          <Text style={styles.noDriverText}>Aucun conducteur disponible pour le moment. Réessaie dans quelques minutes.</Text>
+        )}
       </View>
+
+      {ride.driver && (
+        <View style={styles.driverBox}>
+          <Text style={styles.driverName}>
+            {ride.driver.firstName} {ride.driver.lastName}
+          </Text>
+          <Text style={styles.detailText}>Note : {ride.driver.rating.toFixed(1)} / 5</Text>
+          {etaMinutes !== null && <Text style={styles.detailText}>Arrivée estimée : {etaMinutes} min</Text>}
+        </View>
+      )}
 
       <View style={styles.details}>
         {ride.destinationAddress && <Text style={styles.detailText}>Destination : {ride.destinationAddress}</Text>}
@@ -112,6 +155,9 @@ const styles = StyleSheet.create({
   statusBox: { alignItems: 'center', gap: 16 },
   spinner: { marginBottom: 8 },
   statusText: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  noDriverText: { fontSize: 13, color: '#d32f2f', textAlign: 'center' },
+  driverBox: { alignItems: 'center', gap: 4, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 16 },
+  driverName: { fontSize: 16, fontWeight: '700' },
   details: { gap: 8, alignItems: 'center' },
   detailText: { fontSize: 14, color: '#555' },
   priceText: { fontSize: 22, fontWeight: '700', color: '#1a73e8', marginTop: 8 },

@@ -13,10 +13,18 @@ export interface RideEstimate {
   estimatedPrice: number;
 }
 
+export interface RideDriver {
+  id: string;
+  firstName: string;
+  lastName: string;
+  rating: number;
+}
+
 export interface Ride {
   id: string;
   passengerId: string;
   driverId: string | null;
+  driver: RideDriver | null;
   vehicleType: VehicleType;
   pickupLatitude: number;
   pickupLongitude: number;
@@ -60,4 +68,24 @@ export async function getRide(id: string): Promise<Ride> {
 export async function cancelRide(id: string): Promise<Ride> {
   const { data } = await api.patch(`/rides/${id}/cancel`);
   return data.ride;
+}
+
+/** Payload of the `ride:requested` socket event sent to a candidate driver. */
+export interface RideRequestPayload {
+  rideId: string;
+  pickupAddress: string | null;
+  destinationAddress: string | null;
+  distanceToPickupKm: number;
+  rideDistanceKm: number;
+  estimatedDuration: number;
+  estimatedPrice: number;
+  vehicleType: VehicleType;
+  responseTimeoutSeconds: number;
+}
+
+/** Payload of the `ride:driver_assigned` socket event sent to the passenger. */
+export interface DriverAssignedPayload {
+  rideId: string;
+  driver: { firstName: string; lastName: string; rating: number };
+  etaMinutes: number;
 }

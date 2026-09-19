@@ -1,3 +1,4 @@
+import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -8,6 +9,7 @@ dotenv.config();
 import authRoutes from './routes/auth.routes';
 import driverRoutes from './routes/driver.routes';
 import rideRoutes from './routes/ride.routes';
+import { initSocket } from './socket';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +26,9 @@ app.use('/auth', authRoutes);
 app.use('/driver', driverRoutes);
 app.use('/rides', rideRoutes);
 
-app.listen(PORT, () => {
+const httpServer = http.createServer(app);
+initSocket(httpServer);
+
+httpServer.listen(PORT, () => {
   console.log(`TaxiDja backend listening on port ${PORT}`);
 });
