@@ -188,7 +188,7 @@ export async function getHistory(userId: string, role: UserRole, page: number) {
     ? { driverId, status: { in: HISTORY_STATUSES } }
     : { passengerId: userId, status: { in: HISTORY_STATUSES } };
 
-  const [rides, total] = await prisma.$transaction([
+  const [rawRides, total] = await prisma.$transaction([
     prisma.ride.findMany({
       where,
       orderBy: { requestedAt: 'desc' },
@@ -198,6 +198,16 @@ export async function getHistory(userId: string, role: UserRole, page: number) {
     }),
     prisma.ride.count({ where }),
   ]);
+
+  // Flatten driver/passenger to the same safe subset getRideById's consumer
+  // exposes — never leak the full Driver/User rows (location, password hash, etc).
+  const rides = rawRides.map(({ driver, passenger, ...rideFields }) => ({
+    ...rideFields,
+    driver: driver
+      ? { id: driver.id, rating: driver.rating, firstName: driver.user.firstName, lastName: driver.user.lastName }
+      : null,
+    passenger: { firstName: passenger.firstName, lastName: passenger.lastName },
+  }));
 
   // Revenue is summed over ALL of the driver's completed rides (not just this
   // page) — simplest useful MVP definition of "their earnings so far".
