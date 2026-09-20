@@ -14,7 +14,11 @@ import { initSocket } from './socket';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// CORS only affects browser clients (it's a browser-enforced restriction, not
+// something a native app's HTTP client checks) — permissive here for the web
+// admin dashboard during dev. Explicit rather than relying on the cors()
+// default, which is equally permissive but easy to second-guess later.
+app.use(cors({ origin: true }));
 app.use(helmet());
 app.use(express.json());
 
@@ -29,6 +33,8 @@ app.use('/rides', rideRoutes);
 const httpServer = http.createServer(app);
 initSocket(httpServer);
 
-httpServer.listen(PORT, () => {
-  console.log(`TaxiDja backend listening on port ${PORT}`);
+const HOST = '0.0.0.0';
+
+httpServer.listen(Number(PORT), HOST, () => {
+  console.log(`TaxiDja backend listening on ${HOST}:${PORT}`);
 });

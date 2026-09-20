@@ -1,4 +1,10 @@
-const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? '';
+// Android blocks plain HTTP traffic by default for apps targeting recent SDKs
+// (the app itself — not the phone's browser, which explains why a browser can
+// reach the dev backend over http:// while the app silently fails). Only
+// needed while the API URL is http (local dev/LAN testing); a real deployment
+// behind https doesn't need this.
+const usesCleartextTraffic = apiUrl.startsWith('http://');
 
 module.exports = {
   expo: {
@@ -12,10 +18,10 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.taxidja.app',
-      config: googleMapsApiKey ? { googleMapsApiKey } : undefined,
     },
     android: {
       package: 'com.taxidja.app',
+      versionCode: 1,
       adaptiveIcon: {
         backgroundColor: '#E6F4FE',
         foregroundImage: './assets/android-icon-foreground.png',
@@ -23,9 +29,6 @@ module.exports = {
         monochromeImage: './assets/android-icon-monochrome.png',
       },
       predictiveBackGestureEnabled: false,
-      // Without a key, Google Maps still renders on Android in development
-      // (with a "for development purposes only" watermark) rather than crashing.
-      config: googleMapsApiKey ? { googleMaps: { apiKey: googleMapsApiKey } } : undefined,
     },
     web: {
       favicon: './assets/favicon.png',
@@ -33,6 +36,22 @@ module.exports = {
     plugins: [
       'expo-router',
       'expo-secure-store',
+      '@maplibre/maplibre-react-native',
+      [
+        'expo-build-properties',
+        {
+          android: { usesCleartextTraffic },
+        },
+      ],
+      [
+        'expo-splash-screen',
+        {
+          image: './assets/splash-icon.png',
+          imageWidth: 200,
+          resizeMode: 'contain',
+          backgroundColor: '#E6F4FE',
+        },
+      ],
       [
         'expo-location',
         {
@@ -41,5 +60,10 @@ module.exports = {
         },
       ],
     ],
+    extra: {
+      eas: {
+        projectId: 'ed376c4e-7034-441f-888b-3683572e8ce7',
+      },
+    },
   },
 };

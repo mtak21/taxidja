@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Map, Camera, Marker } from '@maplibre/maplibre-react-native';
 import type { Coordinates } from '../hooks/useLocation';
 import { MapErrorBoundary } from './MapErrorBoundary';
+import { OSM_STYLE } from '../config/osmMapStyle';
 
 interface AppMapProps {
   coordinates: Coordinates | null;
@@ -11,22 +12,9 @@ interface AppMapProps {
 }
 
 // N'Djamena — sensible default center when the device position is unavailable.
-const FALLBACK_REGION = {
-  latitude: 12.1348,
-  longitude: 15.0557,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
+const FALLBACK_CENTER: Coordinates = { latitude: 12.1348, longitude: 15.0557 };
 
-// On Android, react-native-maps' native Google Maps view throws a fatal
-// "API key not found" exception when mounted without a key — it does not
-// degrade to a watermarked map like on iOS. So without a key we must avoid
-// mounting <MapView> at all on Android rather than relying on it to fail
-// gracefully.
-export const hasGoogleMapsKey = Boolean(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
-export const canRenderMap = Platform.OS !== 'android' || hasGoogleMapsKey;
-
-export function AppMap({ coordinates, loading, errorMessage, markerTitle }: AppMapProps) {
+export function AppMap({ coordinates, loading, errorMessage }: AppMapProps) {
   if (loading) {
     return (
       <View style={styles.center}>
@@ -35,35 +23,20 @@ export function AppMap({ coordinates, loading, errorMessage, markerTitle }: AppM
     );
   }
 
-  const region = coordinates
-    ? { ...coordinates, latitudeDelta: 0.01, longitudeDelta: 0.01 }
-    : FALLBACK_REGION;
+  const center = coordinates ?? FALLBACK_CENTER;
 
   return (
     <View style={styles.container}>
-      {canRenderMap ? (
-        <MapErrorBoundary>
-          <MapView
-            style={StyleSheet.absoluteFill}
-            provider={PROVIDER_GOOGLE}
-            initialRegion={region}
-            showsUserLocation={Boolean(coordinates)}
-          >
-            {coordinates && <Marker coordinate={coordinates} title={markerTitle} />}
-          </MapView>
-        </MapErrorBoundary>
-      ) : (
-        <View style={styles.noKeyFallback}>
-          <Text style={styles.noKeyText}>
-            Carte indisponible : aucune clé Google Maps configurée (EXPO_PUBLIC_GOOGLE_MAPS_API_KEY).
-          </Text>
+      <MapErrorBoundary>
+        <Map style={StyleSheet.absoluteFill} mapStyle={OSM_STYLE}>
+          <Camera initialViewState={{ center: [center.longitude, center.latitude], zoom: 15 }} />
           {coordinates && (
-            <Text style={styles.coordsText}>
-              Position : {coordinates.latitude.toFixed(5)}, {coordinates.longitude.toFixed(5)}
-            </Text>
+            <Marker id="current-position" lngLat={[coordinates.longitude, coordinates.latitude]}>
+              <View style={styles.pin} />
+            </Marker>
           )}
-        </View>
-      )}
+        </Map>
+      </MapErrorBoundary>
 
       {errorMessage && (
         <View style={styles.banner}>
@@ -77,16 +50,14 @@ export function AppMap({ coordinates, loading, errorMessage, markerTitle }: AppM
 const styles = StyleSheet.create({
   container: { flex: 1, margin: 16, borderRadius: 12, overflow: 'hidden' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', margin: 16 },
-  noKeyFallback: {
-    flex: 1,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 8,
+  pin: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#1a73e8',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
-  noKeyText: { textAlign: 'center', color: '#555', fontSize: 14 },
-  coordsText: { textAlign: 'center', color: '#333', fontSize: 13, fontWeight: '600' },
   banner: {
     position: 'absolute',
     bottom: 12,
