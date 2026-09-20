@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { UserRole } from '@prisma/client';
-import { estimateRideSchema, createRideSchema } from '../validators/ride.validator';
+import { estimateRideSchema, createRideSchema, rateRideSchema, historyQuerySchema } from '../validators/ride.validator';
 import { prisma } from '../config/prisma';
 import * as rideService from '../services/ride.service';
 import * as dispatchService from '../services/dispatch.service';
+import * as ratingService from '../services/rating.service';
 import { getIo, userRoom } from '../socket/io';
 
 function handleError(res: Response, error: unknown) {
@@ -151,6 +152,40 @@ export async function completeRide(req: Request, res: Response) {
       .emit('ride:completed', { rideId: result.ride.id, finalPrice: result.ride.finalPrice });
 
     return res.status(200).json({ ride: result.ride });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function rateRide(req: Request, res: Response) {
+  try {
+    const input = rateRideSchema.parse(req.body);
+    const result = await ratingService.rateRide(req.params.id as string, req.user!.id, input.score, input.comment);
+
+    if ('error' in result) {
+      if (result.error === 'not_found') {
+        return res.status(404).json({ error: 'Ride not found' });
+      }
+      if (result.error === 'not_owner') {
+        return res.status(403).json({ error: 'You are not the passenger of this ride' });
+      }
+      if (result.error === 'ride_not_completed' || result.error === 'no_driver') {
+        return res.status(409).json({ error: 'Ride is not eligible for rating' });
+      }
+      return res.status(409).json({ error: 'Ride has already been rated' });
+    }
+
+    return res.status(201).json({ rating: result.rating });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function getHistory(req: Request, res: Response) {
+  try {
+    const input = historyQuerySchema.parse(req.query);
+    const result = await rideService.getHistory(req.user!.id, req.user!.role, input.page);
+    return res.status(200).json(result);
   } catch (error) {
     return handleError(res, error);
   }

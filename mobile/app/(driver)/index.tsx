@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
+import { View, Text, Switch, Pressable, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
@@ -71,6 +71,10 @@ export default function DriverHome() {
         <Switch value={isOnline} onValueChange={handleToggle} disabled={isUpdatingStatus} />
       </View>
 
+      <Pressable style={styles.historyButton} onPress={() => router.push('/(driver)/history')}>
+        <Text style={styles.historyButtonText}>Mes courses</Text>
+      </Pressable>
+
       <View style={styles.mapArea}>
         <AppMap
           coordinates={coordinates}
@@ -112,4 +116,14 @@ const styles = StyleSheet.create({
   },
   statusLabel: { fontSize: 16, fontWeight: '600' },
   requestsPlaceholderText: { color: '#666', fontSize: 16 },
+  historyButton: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#1a73e8',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+  },
+  historyButtonText: { color: '#1a73e8', fontWeight: '600', fontSize: 14 },
 });

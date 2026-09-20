@@ -20,5 +20,16 @@ export const createRideSchema = z.object({
   destinationAddress: z.string().trim().min(1).optional(),
 });
 
+export const rateRideSchema = z.object({
+  score: z.number().int().min(1).max(5),
+  comment: z.string().trim().min(1).optional(),
+});
+
+export const historyQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+});
+
 export type EstimateRideInput = z.infer<typeof estimateRideSchema>;
 export type CreateRideInput = z.infer<typeof createRideSchema>;
+export type RateRideInput = z.infer<typeof rateRideSchema>;
+export type HistoryQueryInput = z.infer<typeof historyQuerySchema>;

@@ -91,6 +91,45 @@ export async function completeRide(id: string): Promise<Ride> {
   return data.ride;
 }
 
+export interface Rating {
+  id: string;
+  rideId: string;
+  score: number;
+  comment: string | null;
+  createdAt: string;
+}
+
+export async function rateRide(id: string, score: number, comment?: string): Promise<Rating> {
+  const { data } = await api.post(`/rides/${id}/rating`, { score, comment });
+  return data.rating;
+}
+
+export interface HistoryRide {
+  id: string;
+  driver: RideDriver | null;
+  passenger: RidePassenger | null;
+  destinationAddress: string | null;
+  pickupAddress: string | null;
+  distance: number;
+  estimatedPrice: number;
+  finalPrice: number | null;
+  status: Ride['status'];
+  requestedAt: string;
+}
+
+export interface HistoryResponse {
+  rides: HistoryRide[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalRevenue?: number;
+}
+
+export async function getRideHistory(page = 1): Promise<HistoryResponse> {
+  const { data } = await api.get('/rides/history', { params: { page } });
+  return data;
+}
+
 /** Payload of the `ride:requested` socket event sent to a candidate driver. */
 export interface RideRequestPayload {
   rideId: string;

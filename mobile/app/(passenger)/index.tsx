@@ -27,6 +27,10 @@ export default function PassengerHome() {
       <Pressable style={styles.reserveButton} onPress={handleReserve}>
         <Text style={styles.reserveButtonText}>Réserver une course</Text>
       </Pressable>
+
+      <Pressable style={styles.historyButton} onPress={() => router.push('/(passenger)/history')}>
+        <Text style={styles.historyButtonText}>Mes courses</Text>
+      </Pressable>
     </View>
   );
 }
@@ -42,4 +46,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reserveButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  historyButton: {
+    margin: 16,
+    marginTop: 0,
+    borderWidth: 1,
+    borderColor: '#1a73e8',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  historyButtonText: { color: '#1a73e8', fontWeight: '600', fontSize: 16 },
 });

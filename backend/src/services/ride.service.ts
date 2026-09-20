@@ -1,4 +1,4 @@
-import { RideStatus, VehicleType } from '@prisma/client';
+import { RideStatus, UserRole, VehicleType } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { estimateRide, calculateDistanceKm, calculatePrice, type Coordinates } from './pricing.service';
 
@@ -167,4 +167,48 @@ export async function completeRide(rideId: string, userId: string) {
   ]);
 
   return { ride: updated };
+}
+
+const HISTORY_PAGE_SIZE = 20;
+const HISTORY_STATUSES: RideStatus[] = [RideStatus.COMPLETED, RideStatus.CANCELLED];
+
+export async function getHistory(userId: string, role: UserRole, page: number) {
+  const isDriver = role === UserRole.DRIVER;
+  let driverId: string | null = null;
+
+  if (isDriver) {
+    const driver = await prisma.driver.findUnique({ where: { userId } });
+    if (!driver) {
+      return { rides: [], total: 0, page, pageSize: HISTORY_PAGE_SIZE, totalRevenue: 0 };
+    }
+    driverId = driver.id;
+  }
+
+  const where = isDriver
+    ? { driverId, status: { in: HISTORY_STATUSES } }
+    : { passengerId: userId, status: { in: HISTORY_STATUSES } };
+
+  const [rides, total] = await prisma.$transaction([
+    prisma.ride.findMany({
+      where,
+      orderBy: { requestedAt: 'desc' },
+      skip: (page - 1) * HISTORY_PAGE_SIZE,
+      take: HISTORY_PAGE_SIZE,
+      include: { driver: { include: { user: true } }, passenger: true },
+    }),
+    prisma.ride.count({ where }),
+  ]);
+
+  // Revenue is summed over ALL of the driver's completed rides (not just this
+  // page) — simplest useful MVP definition of "their earnings so far".
+  let totalRevenue: number | undefined;
+  if (isDriver && driverId) {
+    const revenueAgg = await prisma.ride.aggregate({
+      where: { driverId, status: RideStatus.COMPLETED },
+      _sum: { finalPrice: true },
+    });
+    totalRevenue = revenueAgg._sum.finalPrice ?? 0;
+  }
+
+  return { rides, total, page, pageSize: HISTORY_PAGE_SIZE, totalRevenue };
 }

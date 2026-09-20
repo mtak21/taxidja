@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   getRide,
   cancelRide,
+  rateRide,
   type Ride,
   type DriverAssignedPayload,
   type RideLifecyclePayload,
   type RideCompletedPayload,
 } from '../../../src/services/ride';
 import { connectSocket, disconnectSocket } from '../../../src/services/socket';
+import { StarRating } from '../../../src/components/StarRating';
 
 const STATUS_LABELS: Record<Ride['status'], string> = {
   REQUESTED: 'Recherche d\'un conducteur...',
@@ -34,6 +36,10 @@ export default function RideStatusScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [noDriverMessage, setNoDriverMessage] = useState(false);
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
 
   const loadRide = useCallback(async () => {
     try {
@@ -120,6 +126,27 @@ export default function RideStatusScreen() {
     ]);
   };
 
+  const handleSubmitRating = async () => {
+    if (ratingScore < 1) {
+      Alert.alert('Note requise', 'Choisis une note de 1 à 5 étoiles.');
+      return;
+    }
+    setIsSubmittingRating(true);
+    try {
+      await rateRide(id, ratingScore, ratingComment.trim() || undefined);
+      setHasRated(true);
+    } catch (error: any) {
+      if (error?.response?.status === 409) {
+        // Already rated (e.g. resumed after an earlier successful submit) — treat as done.
+        setHasRated(true);
+      } else {
+        Alert.alert('Erreur', "Impossible d'envoyer la notation. Réessaie.");
+      }
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -178,7 +205,28 @@ export default function RideStatusScreen() {
         </Pressable>
       )}
 
-      {!canCancel && (
+      {isCompleted && !hasRated && (
+        <View style={styles.ratingBox}>
+          <Text style={styles.ratingTitle}>Note ton conducteur</Text>
+          <StarRating value={ratingScore} onChange={setRatingScore} disabled={isSubmittingRating} />
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Commentaire (optionnel)"
+            value={ratingComment}
+            onChangeText={setRatingComment}
+            editable={!isSubmittingRating}
+            multiline
+          />
+          <Pressable style={styles.actionButton} onPress={handleSubmitRating} disabled={isSubmittingRating}>
+            <Text style={styles.actionButtonText}>{isSubmittingRating ? 'Envoi...' : 'Envoyer la note'}</Text>
+          </Pressable>
+          <Pressable onPress={() => setHasRated(true)} disabled={isSubmittingRating}>
+            <Text style={styles.skipText}>Passer</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {!canCancel && (!isCompleted || hasRated) && (
         <Pressable style={styles.homeButton} onPress={() => router.replace('/(passenger)')}>
           <Text style={styles.homeButtonText}>Retour à l'accueil</Text>
         </Pressable>
@@ -203,4 +251,19 @@ const styles = StyleSheet.create({
   cancelButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   homeButton: { backgroundColor: '#1a73e8', borderRadius: 8, padding: 16, alignItems: 'center' },
   homeButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  ratingBox: { alignItems: 'center', gap: 12, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 16 },
+  ratingTitle: { fontSize: 16, fontWeight: '600' },
+  commentInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 48,
+    backgroundColor: '#fff',
+  },
+  actionButton: { backgroundColor: '#2e7d32', borderRadius: 8, padding: 16, alignItems: 'center', width: '100%' },
+  actionButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  skipText: { color: '#888', fontSize: 14 },
 });

@@ -10,10 +10,12 @@ router.use(authMiddleware);
 
 router.post('/estimate', requireRole(UserRole.PASSENGER), rideController.estimateRide);
 router.post('/', requireRole(UserRole.PASSENGER), rideController.createRide);
+router.get('/history', rideController.getHistory);
 router.get('/:id', rideController.getRide);
 router.patch('/:id/cancel', requireRole(UserRole.PASSENGER), rideController.cancelRide);
 router.patch('/:id/arriving', requireRole(UserRole.DRIVER), rideController.markArriving);
 router.patch('/:id/start', requireRole(UserRole.DRIVER), rideController.startRide);
 router.patch('/:id/complete', requireRole(UserRole.DRIVER), rideController.completeRide);
+router.post('/:id/rating', requireRole(UserRole.PASSENGER), rideController.rateRide);
 
 export default router;
