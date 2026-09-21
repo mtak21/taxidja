@@ -29,6 +29,12 @@ enum RideStatus {
   CANCELLED
 }
 
+enum DriverVerificationStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+}
+
 model User {
   id            String         @id @default(uuid())
   firstName     String
@@ -37,6 +43,7 @@ model User {
   email         String?        @unique
   passwordHash  String
   role          UserRole       @default(PASSENGER)
+  isActive      Boolean        @default(true)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
@@ -46,20 +53,21 @@ model User {
 }
 
 model Driver {
-  id                 String    @id @default(uuid())
-  userId             String    @unique
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  currentLatitude    Float?
-  currentLongitude   Float?
-  onlineStatus       Boolean   @default(false)
-  lastLocationUpdate DateTime?
-  rating             Float     @default(5.0)
-  totalTrips         Int       @default(0)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  rides              Ride[]
-  vehicles           Vehicle[]
-  ratings            Rating[]
+  id                   String                    @id @default(uuid())
+  userId               String                    @unique
+  user                 User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentLatitude      Float?
+  currentLongitude     Float?
+  onlineStatus         Boolean                   @default(false)
+  lastLocationUpdate   DateTime?
+  rating               Float                     @default(5.0)
+  totalTrips           Int                       @default(0)
+  verificationStatus   DriverVerificationStatus  @default(PENDING)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  rides                Ride[]
+  vehicles             Vehicle[]
+  ratings              Rating[]
 }
 
 model Vehicle {
@@ -143,4 +151,26 @@ model RefreshToken {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+model City {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  zones     Zone[]
+}
+
+model Zone {
+  id        String   @id @default(uuid())
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cityId, name])
+  @@index([cityId])
 }

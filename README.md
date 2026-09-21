@@ -44,9 +44,13 @@ npx expo start
 
 ```bash
 cd admin
+cp .env.example .env
 npm install
 npm run dev
 ```
+
+Compte admin de dev créé par `backend/prisma/seed.ts` — email `admin@taxidja.td`, mot de passe
+`admin1234` (voir `admin/README.md`).
 
 ## Build & test sur un téléphone Android (APK)
 

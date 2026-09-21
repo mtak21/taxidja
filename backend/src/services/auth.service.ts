@@ -107,6 +107,10 @@ export async function login(input: { phone?: string; email?: string; password: s
     throw new AuthError(401, 'Invalid credentials');
   }
 
+  if (!user.isActive) {
+    throw new AuthError(403, 'Account disabled');
+  }
+
   const tokens = await issueTokenPair(user);
   return { user: sanitizeUser(user), ...tokens };
 }

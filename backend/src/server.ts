@@ -9,6 +9,7 @@ dotenv.config();
 import authRoutes from './routes/auth.routes';
 import driverRoutes from './routes/driver.routes';
 import rideRoutes from './routes/ride.routes';
+import adminRoutes from './routes/admin.routes';
 import { initSocket } from './socket';
 
 const app = express();
@@ -29,6 +30,7 @@ app.get('/health', (_req, res) => {
 app.use('/auth', authRoutes);
 app.use('/driver', driverRoutes);
 app.use('/rides', rideRoutes);
+app.use('/admin', adminRoutes);
 
 const httpServer = http.createServer(app);
 initSocket(httpServer);
