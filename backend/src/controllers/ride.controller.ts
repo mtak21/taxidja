@@ -81,7 +81,16 @@ export async function getRide(req: Request, res: Response) {
 
     const { driver, passenger, ...rideFields } = ride;
     const safeDriver = driver
-      ? { id: driver.id, rating: driver.rating, firstName: driver.user.firstName, lastName: driver.user.lastName }
+      ? {
+          id: driver.id,
+          rating: driver.rating,
+          firstName: driver.user.firstName,
+          lastName: driver.user.lastName,
+          // Seeds the passenger's live-tracking marker before the first
+          // driver:position_update socket tick arrives.
+          currentLatitude: driver.currentLatitude,
+          currentLongitude: driver.currentLongitude,
+        }
       : null;
     const safePassenger = { firstName: passenger.firstName, lastName: passenger.lastName };
 

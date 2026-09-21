@@ -128,7 +128,41 @@ Avant un lancement avec plusieurs utilisateurs actifs, remplacer `tiles` dans `o
   [Stadia Maps](https://stadiamaps.com/)), ou
 - un serveur de tuiles auto-hébergé (ex. [OpenMapTiles](https://openmaptiles.org/) + tileserver-gl).
 
+## Itinéraires routiers (OSRM)
+
+La distance/durée d'une course et le tracé affiché sur la carte viennent d'un vrai calcul
+d'itinéraire routier via [OSRM](http://project-osrm.org/) (Open Source Routing Machine), pas d'une
+ligne droite. Le backend (`backend/src/services/routing.service.ts`) appelle le serveur de démo
+public `router.project-osrm.org` (`GET /route/v1/driving/...`), sans clé ni compte.
+
+**Important — avant une mise en production avec de vrais utilisateurs** : comme pour les tuiles
+OpenStreetMap ci-dessus, le serveur de démo public OSRM est prévu pour de l'évaluation/développement,
+avec des limites d'usage raisonnable non documentées formellement mais bien réelles (risque de
+rate-limiting ou d'indisponibilité sous charge) — **pas adapté à une production à grande échelle**.
+Avant un lancement avec plusieurs utilisateurs actifs, remplacer par :
+- un serveur OSRM auto-hébergé, construit avec les données OpenStreetMap du Tchad (extrait
+  disponible sur [Geofabrik](http://download.geofabrik.de/africa/chad.html)) — solution recommandée,
+  gratuite une fois hébergée, contrôle total sur la charge et la latence ; ou
+- un service de routage payant équivalent (Mapbox Directions API, Google Directions API,
+  GraphHopper, etc).
+
+Si OSRM est injoignable (timeout de 5s, erreur réseau, panne), le backend bascule automatiquement
+sur un calcul Haversine (ligne droite) avec un `console.error` explicite — jamais de crash, jamais
+une réservation bloquée, juste une estimation moins précise le temps que ça se rétablisse. Le champ
+`Ride.routeGeometry` (JSON, liste de points `{latitude, longitude}`) est `null` dans ce cas, puisqu'un
+fallback ligne droite n'a pas de vrai tracé à afficher.
+
+## Suivi en direct
+
+Pendant une course active (`ACCEPTED` / `DRIVER_ARRIVING` / `IN_PROGRESS`), la position GPS du
+conducteur (déjà suivie côté mobile via `useDriverLocationTracking`) est diffusée en temps réel au
+passager assigné via l'événement Socket.IO `driver:position_update`, émis par le backend à chaque
+mise à jour de position (`PATCH /driver/location`). Le passager affiche un marqueur qui se déplace en
+direct sur la carte ; le conducteur affiche sa propre position ainsi que le tracé vers sa prochaine
+étape (point de départ du passager, puis destination finale).
+
 ## Statut
 
-Phase actuelle : notation, historique des courses (passager/conducteur), build APK de test et carte
-OpenStreetMap/MapLibre (sans dépendance Google Maps) implémentés.
+Phase actuelle : notation, historique des courses (passager/conducteur), build APK de test, carte
+OpenStreetMap/MapLibre (sans dépendance Google Maps), itinéraires routiers réels (OSRM) et suivi en
+direct du conducteur implémentés.

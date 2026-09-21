@@ -2,22 +2,26 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Map, Camera, Marker, type MapProps } from '@maplibre/maplibre-react-native';
 import type { Coordinates } from '../hooks/useLocation';
 import { MapErrorBoundary } from './MapErrorBoundary';
+import { RoutePolyline } from './RoutePolyline';
 import { OSM_STYLE } from '../config/osmMapStyle';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { radius } from '../theme/radius';
 import { typography } from '../theme/typography';
+import type { RoutePoint } from '../services/ride';
 
 interface DestinationPickerProps {
   pickup: Coordinates | null;
   destination: Coordinates | null;
   onSelectDestination: (coordinates: Coordinates) => void;
+  /** The real road route between pickup and destination, once estimated. */
+  route?: RoutePoint[];
 }
 
 const FALLBACK_CENTER: Coordinates = { latitude: 12.1348, longitude: 15.0557 };
 
 /** Lets the passenger pick a destination by tapping the map. */
-export function DestinationPicker({ pickup, destination, onSelectDestination }: DestinationPickerProps) {
+export function DestinationPicker({ pickup, destination, onSelectDestination, route }: DestinationPickerProps) {
   const center = pickup ?? FALLBACK_CENTER;
 
   const handlePress: NonNullable<MapProps['onPress']> = (event) => {
@@ -30,6 +34,7 @@ export function DestinationPicker({ pickup, destination, onSelectDestination }: 
       <MapErrorBoundary>
         <Map style={StyleSheet.absoluteFill} mapStyle={OSM_STYLE} onPress={handlePress}>
           <Camera initialViewState={{ center: [center.longitude, center.latitude], zoom: 14 }} />
+          {route && route.length > 1 && <RoutePolyline points={route} />}
           {pickup && (
             <Marker id="pickup" lngLat={[pickup.longitude, pickup.latitude]}>
               <View style={[styles.pin, styles.pickupPin]} />

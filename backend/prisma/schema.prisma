@@ -106,6 +106,10 @@ model Ride {
   estimatedDuration    Int
   estimatedPrice       Float
   finalPrice           Float?
+  // Road-route polyline from OSRM as a JSON array of {latitude, longitude}
+  // points, in travel order — null if the ride predates this field or OSRM
+  // was unreachable at creation time (Haversine fallback has no real route).
+  routeGeometry        Json?
   status               RideStatus  @default(REQUESTED)
   requestedAt          DateTime    @default(now())
   acceptedAt           DateTime?

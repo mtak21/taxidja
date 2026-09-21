@@ -7,10 +7,17 @@ export interface Coordinates {
   longitude: number;
 }
 
+export interface RoutePoint {
+  latitude: number;
+  longitude: number;
+}
+
 export interface RideEstimate {
   distance: number;
   estimatedDuration: number;
   estimatedPrice: number;
+  /** Road-route polyline from OSRM (backend falls back to a 2-point straight line if OSRM is unreachable). */
+  routeGeometry: RoutePoint[];
 }
 
 export interface RideDriver {
@@ -18,6 +25,9 @@ export interface RideDriver {
   firstName: string;
   lastName: string;
   rating: number;
+  /** Present while a driver is assigned — seeds the live-tracking marker before the first socket update arrives. */
+  currentLatitude?: number | null;
+  currentLongitude?: number | null;
 }
 
 export interface RidePassenger {
@@ -44,6 +54,8 @@ export interface Ride {
   finalPrice: number | null;
   status: 'REQUESTED' | 'SEARCHING' | 'ACCEPTED' | 'DRIVER_ARRIVING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   requestedAt: string;
+  /** null if the ride predates this field or OSRM was unreachable at creation time. */
+  routeGeometry: RoutePoint[] | null;
 }
 
 export async function estimateRide(
@@ -158,4 +170,11 @@ export interface RideLifecyclePayload {
 export interface RideCompletedPayload {
   rideId: string;
   finalPrice: number;
+}
+
+/** Payload of the `driver:position_update` socket event, sent to the assigned passenger on every driver location update while the trip is active. */
+export interface DriverPositionUpdatePayload {
+  rideId: string;
+  latitude: number;
+  longitude: number;
 }

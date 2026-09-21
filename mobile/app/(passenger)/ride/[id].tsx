@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   getRide,
@@ -9,9 +9,12 @@ import {
   type DriverAssignedPayload,
   type RideLifecyclePayload,
   type RideCompletedPayload,
+  type DriverPositionUpdatePayload,
 } from '../../../src/services/ride';
+import type { Coordinates } from '../../../src/hooks/useLocation';
 import { connectSocket, disconnectSocket } from '../../../src/services/socket';
 import { StarRating } from '../../../src/components/StarRating';
+import { RideTrackingMap } from '../../../src/components/RideTrackingMap';
 import { Button } from '../../../src/components/ui/Button';
 import { Card } from '../../../src/components/ui/Card';
 import { Input } from '../../../src/components/ui/Input';
@@ -35,6 +38,8 @@ const CANCELLABLE_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING'];
 // Any non-terminal status: keep the socket connected across the whole trip,
 // not just while searching, so lifecycle updates arrive without polling.
 const LIVE_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING', 'ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
+// A driver marker is only meaningful once a driver is assigned and en route/on trip.
+const TRACKABLE_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
 
 export default function RideStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,6 +48,7 @@ export default function RideStatusScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [noDriverMessage, setNoDriverMessage] = useState(false);
+  const [driverPosition, setDriverPosition] = useState<Coordinates | null>(null);
   const [ratingScore, setRatingScore] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
@@ -52,6 +58,9 @@ export default function RideStatusScreen() {
     try {
       const data = await getRide(id);
       setRide(data);
+      if (data.driver?.currentLatitude != null && data.driver?.currentLongitude != null) {
+        setDriverPosition({ latitude: data.driver.currentLatitude, longitude: data.driver.currentLongitude });
+      }
     } catch {
       Alert.alert('Erreur', 'Impossible de charger la course.');
     } finally {
@@ -63,7 +72,7 @@ export default function RideStatusScreen() {
     loadRide();
   }, [loadRide]);
 
-  // Listen for realtime dispatch and trip-lifecycle events — no polling.
+  // Listen for realtime dispatch, trip-lifecycle, and live-position events — no polling.
   useEffect(() => {
     if (!ride || !LIVE_STATUSES.includes(ride.status)) return;
 
@@ -96,11 +105,17 @@ export default function RideStatusScreen() {
       loadRide();
     };
 
+    const handlePositionUpdate = (payload: DriverPositionUpdatePayload) => {
+      if (payload.rideId !== id) return;
+      setDriverPosition({ latitude: payload.latitude, longitude: payload.longitude });
+    };
+
     socket.on('ride:driver_assigned', handleAssigned);
     socket.on('ride:no_driver_available', handleNoDriver);
     socket.on('ride:arriving', handleArriving);
     socket.on('ride:started', handleStarted);
     socket.on('ride:completed', handleCompleted);
+    socket.on('driver:position_update', handlePositionUpdate);
 
     return () => {
       socket.off('ride:driver_assigned', handleAssigned);
@@ -108,6 +123,7 @@ export default function RideStatusScreen() {
       socket.off('ride:arriving', handleArriving);
       socket.off('ride:started', handleStarted);
       socket.off('ride:completed', handleCompleted);
+      socket.off('driver:position_update', handlePositionUpdate);
       disconnectSocket();
     };
   }, [ride?.status, id, loadRide]);
@@ -172,87 +188,101 @@ export default function RideStatusScreen() {
 
   const canCancel = CANCELLABLE_STATUSES.includes(ride.status);
   const isCompleted = ride.status === 'COMPLETED';
+  const showTrackingMarker = TRACKABLE_STATUSES.includes(ride.status);
 
   return (
     <View style={styles.container}>
-      <View style={styles.statusBox}>
-        {SEARCHING_STATUSES.includes(ride.status) && (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.spinner} />
-        )}
-        <RideStatusBadge status={ride.status} />
-        <Text style={styles.statusText}>{STATUS_LABELS[ride.status]}</Text>
-        {ride.status === 'CANCELLED' && noDriverMessage && (
-          <Text style={styles.noDriverText}>Aucun conducteur disponible pour le moment. Réessaie dans quelques minutes.</Text>
-        )}
-      </View>
-
-      {ride.driver && (
-        <Card style={styles.driverBox}>
-          <Text style={styles.driverName}>
-            {ride.driver.firstName} {ride.driver.lastName}
-          </Text>
-          <Text style={styles.detailText}>Note : {ride.driver.rating.toFixed(1)} / 5</Text>
-          {etaMinutes !== null && !isCompleted && (
-            <Text style={styles.detailText}>Arrivée estimée : {etaMinutes} min</Text>
-          )}
-        </Card>
-      )}
-
-      <View style={styles.details}>
-        {ride.destinationAddress && <Text style={styles.detailText}>Destination : {ride.destinationAddress}</Text>}
-        <Text style={styles.detailText}>Distance : {ride.distance} km</Text>
-        <Text style={styles.detailText}>Durée estimée : {ride.estimatedDuration} min</Text>
-        {isCompleted && ride.finalPrice !== null ? (
-          <Text style={styles.priceText}>{ride.finalPrice} FCFA (prix final)</Text>
-        ) : (
-          <Text style={styles.priceText}>{ride.estimatedPrice} FCFA</Text>
-        )}
-      </View>
-
-      {canCancel && (
-        <Button
-          title={isCancelling ? 'Annulation...' : 'Annuler la course'}
-          variant="danger"
-          onPress={handleCancel}
-          disabled={isCancelling}
-          loading={isCancelling}
+      <View style={styles.mapArea}>
+        <RideTrackingMap
+          pickup={{ latitude: ride.pickupLatitude, longitude: ride.pickupLongitude }}
+          destination={{ latitude: ride.destinationLatitude, longitude: ride.destinationLongitude }}
+          route={ride.routeGeometry}
+          driverPosition={showTrackingMarker ? driverPosition : null}
         />
-      )}
+      </View>
 
-      {isCompleted && !hasRated && (
-        <Card style={styles.ratingBox}>
-          <Text style={styles.ratingTitle}>Note ton conducteur</Text>
-          <View style={styles.starsWrap}>
-            <StarRating value={ratingScore} onChange={setRatingScore} disabled={isSubmittingRating} />
-          </View>
-          <Input
-            placeholder="Commentaire (optionnel)"
-            value={ratingComment}
-            onChangeText={setRatingComment}
-            editable={!isSubmittingRating}
-            multiline
-            style={styles.commentInput}
-          />
+      <ScrollView contentContainerStyle={styles.infoArea}>
+        <View style={styles.statusBox}>
+          {SEARCHING_STATUSES.includes(ride.status) && (
+            <ActivityIndicator size="large" color={colors.primary} style={styles.spinner} />
+          )}
+          <RideStatusBadge status={ride.status} />
+          <Text style={styles.statusText}>{STATUS_LABELS[ride.status]}</Text>
+          {ride.status === 'CANCELLED' && noDriverMessage && (
+            <Text style={styles.noDriverText}>Aucun conducteur disponible pour le moment. Réessaie dans quelques minutes.</Text>
+          )}
+        </View>
+
+        {ride.driver && (
+          <Card style={styles.driverBox}>
+            <Text style={styles.driverName}>
+              {ride.driver.firstName} {ride.driver.lastName}
+            </Text>
+            <Text style={styles.detailText}>Note : {ride.driver.rating.toFixed(1)} / 5</Text>
+            {etaMinutes !== null && !isCompleted && (
+              <Text style={styles.detailText}>Arrivée estimée : {etaMinutes} min</Text>
+            )}
+          </Card>
+        )}
+
+        <View style={styles.details}>
+          {ride.destinationAddress && <Text style={styles.detailText}>Destination : {ride.destinationAddress}</Text>}
+          <Text style={styles.detailText}>Distance : {ride.distance} km</Text>
+          <Text style={styles.detailText}>Durée estimée : {ride.estimatedDuration} min</Text>
+          {isCompleted && ride.finalPrice !== null ? (
+            <Text style={styles.priceText}>{ride.finalPrice} FCFA (prix final)</Text>
+          ) : (
+            <Text style={styles.priceText}>{ride.estimatedPrice} FCFA</Text>
+          )}
+        </View>
+
+        {canCancel && (
           <Button
-            title={isSubmittingRating ? 'Envoi...' : 'Envoyer la note'}
-            onPress={handleSubmitRating}
-            disabled={isSubmittingRating}
-            loading={isSubmittingRating}
+            title={isCancelling ? 'Annulation...' : 'Annuler la course'}
+            variant="danger"
+            onPress={handleCancel}
+            disabled={isCancelling}
+            loading={isCancelling}
           />
-          <Button title="Passer" variant="secondary" onPress={() => setHasRated(true)} disabled={isSubmittingRating} />
-        </Card>
-      )}
+        )}
 
-      {!canCancel && (!isCompleted || hasRated) && (
-        <Button title="Retour à l'accueil" onPress={() => router.replace('/(passenger)')} />
-      )}
+        {isCompleted && !hasRated && (
+          <Card style={styles.ratingBox}>
+            <Text style={styles.ratingTitle}>Note ton conducteur</Text>
+            <View style={styles.starsWrap}>
+              <StarRating value={ratingScore} onChange={setRatingScore} disabled={isSubmittingRating} />
+            </View>
+            <Input
+              placeholder="Commentaire (optionnel)"
+              value={ratingComment}
+              onChangeText={setRatingComment}
+              editable={!isSubmittingRating}
+              multiline
+              style={styles.commentInput}
+            />
+            <Button
+              title={isSubmittingRating ? 'Envoi...' : 'Envoyer la note'}
+              onPress={handleSubmitRating}
+              disabled={isSubmittingRating}
+              loading={isSubmittingRating}
+            />
+            <Button title="Passer" variant="secondary" onPress={() => setHasRated(true)} disabled={isSubmittingRating} />
+          </Card>
+        )}
+
+        {!canCancel && (!isCompleted || hasRated) && (
+          <Button title="Retour à l'accueil" onPress={() => router.replace('/(passenger)')} />
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: spacing.xl, justifyContent: 'center', gap: spacing.xl, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+  mapArea: { flex: 1, margin: spacing.lg, marginBottom: 0 },
+  infoArea: { padding: spacing.xl, gap: spacing.xl },
   statusBox: { alignItems: 'center', gap: spacing.md },
   spinner: { marginBottom: spacing.xs },
   statusText: { ...typography.subtitle, color: colors.text, textAlign: 'center' },

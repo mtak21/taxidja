@@ -8,7 +8,10 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post('/estimate', requireRole(UserRole.PASSENGER), rideController.estimateRide);
+// DRIVER is allowed here too: the driver app calls this to get the route
+// (geometry + duration) to its next waypoint — pickup, then destination —
+// during an active trip. It's a pure calculation with no side effects.
+router.post('/estimate', requireRole(UserRole.PASSENGER, UserRole.DRIVER), rideController.estimateRide);
 router.post('/', requireRole(UserRole.PASSENGER), rideController.createRide);
 router.get('/history', rideController.getHistory);
 router.get('/:id', rideController.getRide);

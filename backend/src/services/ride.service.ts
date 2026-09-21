@@ -1,6 +1,7 @@
-import { RideStatus, UserRole, VehicleType } from '@prisma/client';
+import { Prisma, RideStatus, UserRole, VehicleType } from '@prisma/client';
 import { prisma } from '../config/prisma';
-import { estimateRide, calculateDistanceKm, calculatePrice, type Coordinates } from './pricing.service';
+import { calculatePrice, type Coordinates } from './pricing.service';
+import { getRoute } from './routing.service';
 
 interface CreateRideParams {
   passengerId: string;
@@ -12,14 +13,22 @@ interface CreateRideParams {
 }
 
 export async function estimate(pickup: Coordinates, destination: Coordinates, vehicleType: VehicleType) {
-  return estimateRide(pickup, destination, vehicleType);
+  const route = await getRoute(pickup, destination, vehicleType);
+  const estimatedPrice = await calculatePrice(route.distanceKm, vehicleType);
+
+  return {
+    distance: route.distanceKm,
+    estimatedDuration: route.durationMinutes,
+    estimatedPrice,
+    routeGeometry: route.geometry,
+  };
 }
 
 export async function createRide(params: CreateRideParams) {
   const { passengerId, pickup, destination, vehicleType, pickupAddress, destinationAddress } = params;
 
   // Never trust a client-supplied price — recompute it server-side.
-  const { distance, estimatedDuration, estimatedPrice } = await estimateRide(pickup, destination, vehicleType);
+  const { distance, estimatedDuration, estimatedPrice, routeGeometry } = await estimate(pickup, destination, vehicleType);
 
   return prisma.ride.create({
     data: {
@@ -34,6 +43,7 @@ export async function createRide(params: CreateRideParams) {
       distance,
       estimatedDuration,
       estimatedPrice,
+      routeGeometry: routeGeometry as unknown as Prisma.InputJsonValue,
       status: RideStatus.REQUESTED,
     },
   });
@@ -145,13 +155,19 @@ export async function completeRide(rideId: string, userId: string) {
   let finalPrice = ride.estimatedPrice;
 
   if (driver.currentLatitude !== null && driver.currentLongitude !== null) {
-    const actualDistance = calculateDistanceKm(
+    // ride.distance is now a road-route distance (see routing.service.ts),
+    // so the comparison here must use the same road-route metric — comparing
+    // it against a Haversine straight-line distance would almost always look
+    // "different enough" to trigger a recalculation, silently underpricing
+    // every ride.
+    const actualRoute = await getRoute(
       { latitude: ride.pickupLatitude, longitude: ride.pickupLongitude },
       { latitude: driver.currentLatitude, longitude: driver.currentLongitude },
+      ride.vehicleType,
     );
 
-    if (Math.abs(actualDistance - ride.distance) >= FINAL_DISTANCE_TOLERANCE_KM) {
-      finalPrice = await calculatePrice(actualDistance, ride.vehicleType);
+    if (Math.abs(actualRoute.distanceKm - ride.distance) >= FINAL_DISTANCE_TOLERANCE_KM) {
+      finalPrice = await calculatePrice(actualRoute.distanceKm, ride.vehicleType);
     }
   }
 

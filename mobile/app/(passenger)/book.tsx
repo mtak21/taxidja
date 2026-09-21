@@ -84,7 +84,12 @@ export default function BookRideScreen() {
         {pickupLoading ? (
           <ActivityIndicator size="large" color={colors.primary} style={styles.center} />
         ) : (
-          <DestinationPicker pickup={pickup} destination={destination} onSelectDestination={setDestination} />
+          <DestinationPicker
+            pickup={pickup}
+            destination={destination}
+            onSelectDestination={setDestination}
+            route={estimate?.routeGeometry}
+          />
         )}
       </View>
       {pickupError && <Text style={styles.warningText}>{pickupError}</Text>}
