@@ -24,8 +24,11 @@ export async function updateLocation(req: Request, res: Response) {
 export async function updateStatus(req: Request, res: Response) {
   try {
     const input = updateStatusSchema.parse(req.body);
-    const driver = await driverService.updateStatus(req.user!.id, input.online);
-    return res.status(200).json({ driver });
+    const result = await driverService.updateStatus(req.user!.id, input.online);
+    if ('error' in result) {
+      return res.status(403).json({ error: 'Driver is not verified yet' });
+    }
+    return res.status(200).json(result);
   } catch (error) {
     return handleError(res, error);
   }

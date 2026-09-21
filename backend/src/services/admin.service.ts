@@ -124,18 +124,26 @@ export async function listDrivers(params: { page: number; search?: string }) {
       orderBy: { createdAt: 'desc' },
       skip: (params.page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { user: true, _count: { select: { vehicles: true } } },
+      include: { user: true, vehicles: true },
     }),
     prisma.driver.count({ where }),
   ]);
 
-  const items = drivers.map(({ user, _count, ...driver }) => ({
+  const items = drivers.map(({ user, vehicles, ...driver }) => ({
     ...driver,
     firstName: user.firstName,
     lastName: user.lastName,
     phone: user.phone,
     isActive: user.isActive,
-    vehicleCount: _count.vehicles,
+    vehicles: vehicles.map((v) => ({
+      id: v.id,
+      type: v.type,
+      brand: v.brand,
+      model: v.model,
+      plate: v.plate,
+      color: v.color,
+      isActive: v.isActive,
+    })),
   }));
 
   return { drivers: items, total, page: params.page, pageSize: PAGE_SIZE };
@@ -183,7 +191,15 @@ export async function listVehicles(params: { page: number }) {
   return { vehicles: items, total, page: params.page, pageSize: PAGE_SIZE };
 }
 
-export async function createVehicle(input: { driverId: string; type: VehicleType; plate?: string; isActive: boolean }) {
+export async function createVehicle(input: {
+  driverId: string;
+  type: VehicleType;
+  plate?: string;
+  brand?: string;
+  model?: string;
+  color?: string;
+  isActive: boolean;
+}) {
   const driver = await prisma.driver.findUnique({ where: { id: input.driverId } });
   if (!driver) return { error: 'driver_not_found' as const };
 
@@ -193,7 +209,14 @@ export async function createVehicle(input: { driverId: string; type: VehicleType
 
 export async function updateVehicle(
   id: string,
-  input: { type?: VehicleType; plate?: string | null; isActive?: boolean },
+  input: {
+    type?: VehicleType;
+    plate?: string | null;
+    brand?: string | null;
+    model?: string | null;
+    color?: string | null;
+    isActive?: boolean;
+  },
 ) {
   const vehicle = await prisma.vehicle.findUnique({ where: { id } });
   if (!vehicle) return { error: 'not_found' as const };

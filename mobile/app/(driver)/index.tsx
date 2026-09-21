@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
+import { AxiosError } from 'axios';
 import { useAuthStore } from '../../src/store/authStore';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { AppMap } from '../../src/components/AppMap';
@@ -8,21 +9,44 @@ import { RideRequestModal } from '../../src/components/RideRequestModal';
 import { useLocation } from '../../src/hooks/useLocation';
 import { useDriverLocationTracking } from '../../src/hooks/useDriverLocationTracking';
 import { updateDriverStatus } from '../../src/services/driver';
+import { fetchMe } from '../../src/services/auth';
 import { connectSocket, disconnectSocket } from '../../src/services/socket';
 import type { RideRequestPayload } from '../../src/services/ride';
 import { Button } from '../../src/components/ui/Button';
 import { Badge } from '../../src/components/ui/Badge';
+import { Card } from '../../src/components/ui/Card';
 import { colors } from '../../src/theme/colors';
 import { spacing } from '../../src/theme/spacing';
 import { radius } from '../../src/theme/radius';
 import { typography } from '../../src/theme/typography';
 
+const VERIFICATION_MESSAGES: Record<'PENDING' | 'SUSPENDED', string> = {
+  PENDING: "Ton compte est en cours de vérification. Tu seras notifié une fois validé — tu ne peux pas encore passer en ligne.",
+  SUSPENDED: 'Ton compte a été suspendu. Contacte le support TaxiDja pour plus d\'informations.',
+};
+
 export default function DriverHome() {
   const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
   const { coordinates, loading, errorMessage } = useLocation();
   const [isOnline, setIsOnline] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<RideRequestPayload | null>(null);
+
+  const verificationStatus = user?.driverVerificationStatus ?? null;
+  const isVerified = verificationStatus === 'VERIFIED';
+
+  // Refreshes the driver's verification status on every visit to this
+  // screen — this is how an admin's validation reaches the app: no push,
+  // just picked up the next time the driver opens/foregrounds it.
+  useEffect(() => {
+    fetchMe()
+      .then(setUser)
+      .catch(() => {
+        // Non-fatal: the screen still works with the status from login/register.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useDriverLocationTracking(isOnline, (message) => Alert.alert('Suivi de position', message));
 
@@ -47,8 +71,12 @@ export default function DriverHome() {
     try {
       await updateDriverStatus(value);
       setIsOnline(value);
-    } catch {
-      Alert.alert('Erreur', "Impossible de mettre à jour ton statut. Réessaie.");
+    } catch (error) {
+      const message =
+        error instanceof AxiosError && error.response?.status === 403
+          ? "Ton compte n'est pas encore vérifié — impossible de passer en ligne."
+          : 'Impossible de mettre à jour ton statut. Réessaie.';
+      Alert.alert('Erreur', message);
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -80,11 +108,23 @@ export default function DriverHome() {
         <Switch
           value={isOnline}
           onValueChange={handleToggle}
-          disabled={isUpdatingStatus}
+          disabled={isUpdatingStatus || !isVerified}
           trackColor={{ true: colors.secondary, false: colors.border }}
           thumbColor={colors.surface}
         />
       </View>
+
+      {!isVerified && (verificationStatus === 'PENDING' || verificationStatus === 'SUSPENDED') && (
+        <View style={styles.verificationBannerWrap}>
+          <Card style={styles.verificationBanner}>
+            <Badge
+              label={verificationStatus === 'PENDING' ? 'Vérification en cours' : 'Compte suspendu'}
+              tone={verificationStatus === 'PENDING' ? 'warning' : 'negative'}
+            />
+            <Text style={styles.verificationText}>{VERIFICATION_MESSAGES[verificationStatus]}</Text>
+          </Card>
+        </View>
+      )}
 
       <View style={styles.historyButtonWrap}>
         <Button title="Mes courses" variant="secondary" onPress={() => router.push('/(driver)/history')} />
@@ -120,6 +160,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   statusLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  verificationBannerWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  verificationBanner: { gap: spacing.sm },
+  verificationText: { ...typography.small, color: colors.textSecondary },
   mapArea: { flex: 2 },
   requestsPlaceholder: {
     flex: 1,

@@ -1,3 +1,4 @@
+import { DriverVerificationStatus } from '@prisma/client';
 import { prisma } from '../config/prisma';
 
 export async function updateLocation(userId: string, latitude: number, longitude: number) {
@@ -18,7 +19,14 @@ export async function updateLocation(userId: string, latitude: number, longitude
 }
 
 export async function updateStatus(userId: string, online: boolean) {
-  return prisma.driver.upsert({
+  if (online) {
+    const driver = await prisma.driver.findUnique({ where: { userId } });
+    if (!driver || driver.verificationStatus !== DriverVerificationStatus.VERIFIED) {
+      return { error: 'not_verified' as const };
+    }
+  }
+
+  const driver = await prisma.driver.upsert({
     where: { userId },
     create: {
       userId,
@@ -28,4 +36,6 @@ export async function updateStatus(userId: string, online: boolean) {
       onlineStatus: online,
     },
   });
+
+  return { driver };
 }

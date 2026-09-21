@@ -16,10 +16,21 @@ interface VehicleFormState {
   driverId: string;
   type: VehicleType;
   plate: string;
+  brand: string;
+  model: string;
+  color: string;
   isActive: boolean;
 }
 
-const EMPTY_FORM: VehicleFormState = { driverId: '', type: 'CAR', plate: '', isActive: true };
+const EMPTY_FORM: VehicleFormState = {
+  driverId: '',
+  type: 'CAR',
+  plate: '',
+  brand: '',
+  model: '',
+  color: '',
+  isActive: true,
+};
 
 export function VehiclesPage() {
   const [vehicles, setVehicles] = useState<AdminVehicle[]>([]);
@@ -60,6 +71,9 @@ export function VehiclesPage() {
       driverId: vehicle.driverId,
       type: vehicle.type,
       plate: vehicle.plate ?? '',
+      brand: vehicle.brand ?? '',
+      model: vehicle.model ?? '',
+      color: vehicle.color ?? '',
       isActive: vehicle.isActive,
     });
   }
@@ -72,11 +86,22 @@ export function VehiclesPage() {
         const updated = await updateVehicle(form.id, {
           type: form.type,
           plate: form.plate || null,
+          brand: form.brand || null,
+          model: form.model || null,
+          color: form.color || null,
           isActive: form.isActive,
         });
         setVehicles((prev) => prev.map((v) => (v.id === updated.id ? { ...updated, driverName: prev.find((p) => p.id === updated.id)!.driverName } : v)));
       } else {
-        await createVehicle({ driverId: form.driverId, type: form.type, plate: form.plate || undefined, isActive: form.isActive });
+        await createVehicle({
+          driverId: form.driverId,
+          type: form.type,
+          plate: form.plate || undefined,
+          brand: form.brand || undefined,
+          model: form.model || undefined,
+          color: form.color || undefined,
+          isActive: form.isActive,
+        });
         load(1);
       }
       setForm(null);
@@ -106,7 +131,9 @@ export function VehiclesPage() {
             <tr>
               <th>Conducteur</th>
               <th>Type</th>
+              <th>Marque / modèle</th>
               <th>Plaque</th>
+              <th>Couleur</th>
               <th>Statut</th>
               <th></th>
             </tr>
@@ -116,7 +143,11 @@ export function VehiclesPage() {
               <tr key={vehicle.id}>
                 <td>{vehicle.driverName}</td>
                 <td>{VEHICLE_LABELS[vehicle.type]}</td>
+                <td>
+                  {vehicle.brand ?? '—'} {vehicle.model ?? ''}
+                </td>
                 <td>{vehicle.plate ?? '—'}</td>
+                <td>{vehicle.color ?? '—'}</td>
                 <td>
                   <Badge label={vehicle.isActive ? 'Actif' : 'Inactif'} tone={vehicle.isActive ? 'positive' : 'neutral'} />
                 </td>
@@ -170,8 +201,23 @@ export function VehiclesPage() {
           </div>
 
           <div className="field">
+            <label>Marque</label>
+            <input className="input" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
+          </div>
+
+          <div className="field">
+            <label>Modèle</label>
+            <input className="input" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
+          </div>
+
+          <div className="field">
             <label>Plaque d'immatriculation</label>
             <input className="input" value={form.plate} onChange={(e) => setForm({ ...form, plate: e.target.value })} />
+          </div>
+
+          <div className="field">
+            <label>Couleur</label>
+            <input className="input" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
           </div>
 
           <div className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

@@ -1,4 +1,4 @@
-import { VehicleType } from '@prisma/client';
+import { DriverVerificationStatus, VehicleType } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { calculateDistanceKm, type Coordinates } from './pricing.service';
 
@@ -43,6 +43,10 @@ export async function findCandidates(pickup: Coordinates, vehicleType: VehicleTy
   const drivers = await prisma.driver.findMany({
     where: {
       onlineStatus: true,
+      // The real gate: an unverified/suspended driver must never be offered
+      // a ride, even if something upstream (a bug, a direct API call bypassing
+      // the mobile app) manages to flip onlineStatus to true for them.
+      verificationStatus: DriverVerificationStatus.VERIFIED,
       currentLatitude: { not: null },
       currentLongitude: { not: null },
       lastLocationUpdate: { gte: new Date(Date.now() - MAX_LOCATION_AGE_MS) },

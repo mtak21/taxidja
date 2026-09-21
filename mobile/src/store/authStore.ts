@@ -8,6 +8,12 @@ export interface AuthUser {
   phone: string;
   email?: string | null;
   role: 'PASSENGER' | 'DRIVER' | 'ADMIN';
+  // Only meaningful when role === 'DRIVER' — null otherwise. Refreshed by
+  // re-fetching the current user (see fetchMe in services/auth.ts), not
+  // pushed in real time: the driver home screen re-fetches it on mount, so
+  // an admin's validation shows up next time the driver opens/foregrounds
+  // the app.
+  driverVerificationStatus?: 'PENDING' | 'VERIFIED' | 'SUSPENDED' | null;
 }
 
 interface AuthState {

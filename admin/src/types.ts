@@ -43,6 +43,16 @@ export interface AdminUser {
   createdAt: string;
 }
 
+export interface AdminDriverVehicle {
+  id: string;
+  type: VehicleType;
+  brand: string | null;
+  model: string | null;
+  plate: string | null;
+  color: string | null;
+  isActive: boolean;
+}
+
 export interface AdminDriver {
   id: string;
   userId: string;
@@ -54,7 +64,9 @@ export interface AdminDriver {
   rating: number;
   totalTrips: number;
   verificationStatus: DriverVerificationStatus;
-  vehicleCount: number;
+  licenseNumber: string | null;
+  licenseExpiry: string | null;
+  vehicles: AdminDriverVehicle[];
   createdAt: string;
 }
 
@@ -64,6 +76,9 @@ export interface AdminVehicle {
   driverName: string;
   type: VehicleType;
   plate: string | null;
+  brand: string | null;
+  model: string | null;
+  color: string | null;
   isActive: boolean;
   createdAt: string;
 }

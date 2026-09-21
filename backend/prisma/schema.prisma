@@ -63,6 +63,8 @@ model Driver {
   rating               Float                     @default(5.0)
   totalTrips           Int                       @default(0)
   verificationStatus   DriverVerificationStatus  @default(PENDING)
+  licenseNumber        String?
+  licenseExpiry        DateTime?
   createdAt            DateTime                  @default(now())
   updatedAt            DateTime                  @updatedAt
   rides                Ride[]
@@ -76,6 +78,9 @@ model Vehicle {
   driver    Driver      @relation(fields: [driverId], references: [id], onDelete: Cascade)
   type      VehicleType
   plate     String?
+  brand     String?
+  model     String?
+  color     String?
   isActive  Boolean     @default(true)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt

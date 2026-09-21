@@ -28,12 +28,18 @@ export const createVehicleSchema = z.object({
   driverId: z.string().uuid(),
   type: z.enum(VehicleType),
   plate: z.string().trim().min(1).optional(),
+  brand: z.string().trim().min(1).optional(),
+  model: z.string().trim().min(1).optional(),
+  color: z.string().trim().min(1).optional(),
   isActive: z.boolean().optional().default(true),
 });
 
 export const updateVehicleSchema = z.object({
   type: z.enum(VehicleType).optional(),
   plate: z.string().trim().min(1).nullable().optional(),
+  brand: z.string().trim().min(1).nullable().optional(),
+  model: z.string().trim().min(1).nullable().optional(),
+  color: z.string().trim().min(1).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

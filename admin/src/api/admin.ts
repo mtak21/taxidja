@@ -60,12 +60,30 @@ export async function listVehicles(params: { page: number }) {
   return data;
 }
 
-export async function createVehicle(input: { driverId: string; type: VehicleType; plate?: string; isActive: boolean }) {
+export async function createVehicle(input: {
+  driverId: string;
+  type: VehicleType;
+  plate?: string;
+  brand?: string;
+  model?: string;
+  color?: string;
+  isActive: boolean;
+}) {
   const { data } = await api.post<{ vehicle: AdminVehicle }>('/admin/vehicles', input);
   return data.vehicle;
 }
 
-export async function updateVehicle(id: string, input: { type?: VehicleType; plate?: string | null; isActive?: boolean }) {
+export async function updateVehicle(
+  id: string,
+  input: {
+    type?: VehicleType;
+    plate?: string | null;
+    brand?: string | null;
+    model?: string | null;
+    color?: string | null;
+    isActive?: boolean;
+  },
+) {
   const { data } = await api.patch<{ vehicle: AdminVehicle }>(`/admin/vehicles/${id}`, input);
   return data.vehicle;
 }
