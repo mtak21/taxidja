@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import type { RideRequestPayload } from '../services/ride';
+import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
+import { radius } from '../theme/radius';
+import { typography } from '../theme/typography';
 
 interface RideRequestModalProps {
   request: RideRequestPayload | null;
@@ -38,7 +42,9 @@ export function RideRequestModal({ request, onAccept, onReject }: RideRequestMod
     <Modal visible transparent animationType="slide">
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.countdown}>{secondsLeft}s</Text>
+          <View style={styles.countdownCircle}>
+            <Text style={styles.countdown}>{secondsLeft}</Text>
+          </View>
           <Text style={styles.title}>Nouvelle demande de course</Text>
 
           <View style={styles.details}>
@@ -66,16 +72,31 @@ export function RideRequestModal({ request, onAccept, onReject }: RideRequestMod
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  card: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, gap: 16 },
-  countdown: { fontSize: 28, fontWeight: '700', color: '#d32f2f', textAlign: 'center' },
-  title: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  details: { gap: 6 },
-  detailText: { fontSize: 14, color: '#555' },
-  priceText: { fontSize: 22, fontWeight: '700', color: '#1a73e8', marginTop: 4 },
-  buttonRow: { flexDirection: 'row', gap: 12 },
-  button: { flex: 1, borderRadius: 8, padding: 16, alignItems: 'center' },
-  rejectButton: { backgroundColor: '#d32f2f' },
-  acceptButton: { backgroundColor: '#2e7d32' },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(26,46,68,0.6)', justifyContent: 'flex-end' },
+  card: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
+    gap: spacing.lg,
+    alignItems: 'center',
+  },
+  countdownCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countdown: { ...typography.title, color: colors.textOnPrimary },
+  title: { ...typography.subtitle, color: colors.text, textAlign: 'center' },
+  details: { gap: spacing.xs, alignSelf: 'stretch' },
+  detailText: { ...typography.body, color: colors.textSecondary },
+  priceText: { ...typography.price, color: colors.primary, marginTop: spacing.xs },
+  buttonRow: { flexDirection: 'row', gap: spacing.md, alignSelf: 'stretch' },
+  button: { flex: 1, minHeight: 48, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  rejectButton: { backgroundColor: colors.danger },
+  acceptButton: { backgroundColor: colors.secondary },
+  buttonText: { ...typography.button, color: colors.textOnPrimary },
 });

@@ -3,6 +3,10 @@ import { Map, Camera, Marker } from '@maplibre/maplibre-react-native';
 import type { Coordinates } from '../hooks/useLocation';
 import { MapErrorBoundary } from './MapErrorBoundary';
 import { OSM_STYLE } from '../config/osmMapStyle';
+import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
+import { radius } from '../theme/radius';
+import { typography } from '../theme/typography';
 
 interface AppMapProps {
   coordinates: Coordinates | null;
@@ -18,7 +22,7 @@ export function AppMap({ coordinates, loading, errorMessage }: AppMapProps) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -48,24 +52,24 @@ export function AppMap({ coordinates, loading, errorMessage }: AppMapProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, margin: 16, borderRadius: 12, overflow: 'hidden' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', margin: 16 },
+  container: { flex: 1, margin: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', margin: spacing.lg },
   pin: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#1a73e8',
+    backgroundColor: colors.primary,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.surface,
   },
   banner: {
     position: 'absolute',
-    bottom: 12,
-    left: 12,
-    right: 12,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    borderRadius: 8,
-    padding: 10,
+    bottom: spacing.md,
+    left: spacing.md,
+    right: spacing.md,
+    backgroundColor: colors.dark,
+    borderRadius: radius.sm,
+    padding: spacing.sm + 2,
   },
-  bannerText: { color: '#fff', textAlign: 'center', fontSize: 13 },
+  bannerText: { ...typography.small, color: colors.textOnPrimary, textAlign: 'center' },
 });

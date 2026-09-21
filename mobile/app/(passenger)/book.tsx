@@ -1,15 +1,23 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useLocation } from '../../src/hooks/useLocation';
 import { DestinationPicker } from '../../src/components/DestinationPicker';
 import { estimateRide, createRide, type RideEstimate, type VehicleType } from '../../src/services/ride';
 import type { Coordinates } from '../../src/hooks/useLocation';
+import { Button } from '../../src/components/ui/Button';
+import { Card } from '../../src/components/ui/Card';
+import { Input } from '../../src/components/ui/Input';
+import { VehicleIcon } from '../../src/components/ui/VehicleIcon';
+import { colors } from '../../src/theme/colors';
+import { spacing } from '../../src/theme/spacing';
+import { radius } from '../../src/theme/radius';
+import { typography } from '../../src/theme/typography';
 
-const VEHICLE_OPTIONS: { type: VehicleType; label: string; icon: string }[] = [
-  { type: 'MOTO', label: 'Moto', icon: '🛵' },
-  { type: 'RAKCHA', label: 'Rakcha', icon: '🛺' },
-  { type: 'CAR', label: 'Voiture', icon: '🚗' },
+const VEHICLE_OPTIONS: { type: VehicleType; label: string }[] = [
+  { type: 'MOTO', label: 'Moto' },
+  { type: 'RAKCHA', label: 'Rakcha' },
+  { type: 'CAR', label: 'Voiture' },
 ];
 
 export default function BookRideScreen() {
@@ -66,7 +74,7 @@ export default function BookRideScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
           <Text style={styles.backText}>← Retour</Text>
         </Pressable>
         <Text style={styles.headerTitle}>Réserver une course</Text>
@@ -74,7 +82,7 @@ export default function BookRideScreen() {
 
       <View style={styles.mapArea}>
         {pickupLoading ? (
-          <ActivityIndicator size="large" style={styles.center} />
+          <ActivityIndicator size="large" color={colors.primary} style={styles.center} />
         ) : (
           <DestinationPicker pickup={pickup} destination={destination} onSelectDestination={setDestination} />
         )}
@@ -82,18 +90,8 @@ export default function BookRideScreen() {
       {pickupError && <Text style={styles.warningText}>{pickupError}</Text>}
 
       <View style={styles.form}>
-        <TextInput
-          style={styles.addressInput}
-          placeholder="Adresse de départ (optionnel)"
-          value={pickupAddress}
-          onChangeText={setPickupAddress}
-        />
-        <TextInput
-          style={styles.addressInput}
-          placeholder="Adresse de destination (optionnel)"
-          value={destinationAddress}
-          onChangeText={setDestinationAddress}
-        />
+        <Input placeholder="Adresse de départ (optionnel)" value={pickupAddress} onChangeText={setPickupAddress} />
+        <Input placeholder="Adresse de destination (optionnel)" value={destinationAddress} onChangeText={setDestinationAddress} />
 
         <View style={styles.vehicleRow}>
           {VEHICLE_OPTIONS.map((option) => (
@@ -102,15 +100,21 @@ export default function BookRideScreen() {
               style={[styles.vehicleOption, vehicleType === option.type && styles.vehicleOptionSelected]}
               onPress={() => setVehicleType(option.type)}
             >
-              <Text style={styles.vehicleIcon}>{option.icon}</Text>
-              <Text style={styles.vehicleLabel}>{option.label}</Text>
+              <VehicleIcon
+                type={option.type}
+                size={30}
+                color={vehicleType === option.type ? colors.primary : colors.textSecondary}
+              />
+              <Text style={[styles.vehicleLabel, vehicleType === option.type && styles.vehicleLabelSelected]}>
+                {option.label}
+              </Text>
             </Pressable>
           ))}
         </View>
 
-        <View style={styles.estimateBox}>
+        <Card style={styles.estimateBox} padded={false}>
           {!destination && <Text style={styles.estimateHint}>Choisis une destination pour voir le prix estimé</Text>}
-          {destination && estimateLoading && <ActivityIndicator />}
+          {destination && estimateLoading && <ActivityIndicator color={colors.primary} />}
           {destination && !estimateLoading && estimateError && <Text style={styles.warningText}>{estimateError}</Text>}
           {destination && !estimateLoading && estimate && (
             <View style={styles.estimateRow}>
@@ -119,57 +123,54 @@ export default function BookRideScreen() {
               <Text style={styles.estimatePrice}>{estimate.estimatedPrice} FCFA</Text>
             </View>
           )}
-        </View>
+        </Card>
 
-        <Pressable
-          style={[styles.confirmButton, (!estimate || isConfirming) && styles.confirmButtonDisabled]}
+        <Button
+          title={isConfirming ? 'Confirmation...' : 'Confirmer la course'}
           onPress={handleConfirm}
           disabled={!estimate || isConfirming}
-        >
-          <Text style={styles.confirmButtonText}>{isConfirming ? 'Confirmation...' : 'Confirmer la course'}</Text>
-        </Pressable>
+          loading={isConfirming}
+        />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    padding: 16,
+    gap: spacing.lg,
+    padding: spacing.lg,
     paddingTop: 56,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border,
   },
-  backText: { color: '#1a73e8', fontWeight: '600' },
-  headerTitle: { fontSize: 18, fontWeight: '600' },
-  mapArea: { flex: 1, margin: 16 },
+  backText: { ...typography.smallMedium, color: colors.primary },
+  headerTitle: { ...typography.subtitle, color: colors.text },
+  mapArea: { flex: 1, margin: spacing.lg },
   center: { flex: 1 },
-  form: { padding: 16, gap: 10 },
-  addressInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  vehicleRow: { flexDirection: 'row', gap: 8 },
+  form: { padding: spacing.lg, gap: spacing.md },
+  vehicleRow: { flexDirection: 'row', gap: spacing.sm },
   vehicleOption: {
     flex: 1,
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    gap: 4,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    gap: spacing.xs,
   },
-  vehicleOptionSelected: { borderColor: '#1a73e8', backgroundColor: '#e8f0fe' },
-  vehicleIcon: { fontSize: 24 },
-  vehicleLabel: { fontSize: 13, fontWeight: '600' },
-  estimateBox: { minHeight: 48, justifyContent: 'center', alignItems: 'center' },
-  estimateHint: { color: '#888', fontSize: 13, textAlign: 'center' },
-  estimateRow: { flexDirection: 'row', gap: 16, alignItems: 'center' },
-  estimateValue: { fontSize: 14, color: '#333' },
-  estimatePrice: { fontSize: 18, fontWeight: '700', color: '#1a73e8' },
-  warningText: { color: '#d32f2f', fontSize: 13, textAlign: 'center', paddingHorizontal: 16 },
-  confirmButton: { backgroundColor: '#1a73e8', borderRadius: 8, padding: 16, alignItems: 'center' },
-  confirmButtonDisabled: { backgroundColor: '#a0c0f0' },
-  confirmButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  vehicleOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
+  vehicleLabel: { ...typography.smallMedium, color: colors.textSecondary },
+  vehicleLabelSelected: { color: colors.primary },
+  estimateBox: { minHeight: 56, justifyContent: 'center', alignItems: 'center', paddingVertical: spacing.md },
+  estimateHint: { ...typography.small, color: colors.textSecondary, textAlign: 'center' },
+  estimateRow: { flexDirection: 'row', gap: spacing.lg, alignItems: 'center' },
+  estimateValue: { ...typography.body, color: colors.text },
+  estimatePrice: { ...typography.subtitle, color: colors.primary },
+  warningText: { ...typography.small, color: colors.danger, textAlign: 'center', paddingHorizontal: spacing.lg },
 });

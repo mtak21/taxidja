@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { getRide, markArriving, startRide, completeRide, type Ride } from '../../../src/services/ride';
+import { Button } from '../../../src/components/ui/Button';
+import { RideStatusBadge } from '../../../src/components/ui/Badge';
+import { colors } from '../../../src/theme/colors';
+import { spacing } from '../../../src/theme/spacing';
+import { typography } from '../../../src/theme/typography';
 
 const STATUS_LABELS: Record<Ride['status'], string> = {
   REQUESTED: 'En attente',
@@ -60,7 +65,7 @@ export default function DriverRideScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -68,7 +73,7 @@ export default function DriverRideScreen() {
   if (!ride) {
     return (
       <View style={styles.center}>
-        <Text>Course introuvable.</Text>
+        <Text style={typography.body}>Course introuvable.</Text>
       </View>
     );
   }
@@ -78,6 +83,7 @@ export default function DriverRideScreen() {
 
   return (
     <View style={styles.container}>
+      <RideStatusBadge status={ride.status} />
       <Text style={styles.statusText}>{STATUS_LABELS[ride.status]}</Text>
 
       <View style={styles.details}>
@@ -96,29 +102,31 @@ export default function DriverRideScreen() {
       </View>
 
       {nextAction && (
-        <Pressable style={styles.actionButton} onPress={handleNextAction} disabled={isUpdating}>
-          <Text style={styles.actionButtonText}>{isUpdating ? 'Mise à jour...' : nextAction.label}</Text>
-        </Pressable>
+        <Button
+          title={isUpdating ? 'Mise à jour...' : nextAction.label}
+          onPress={handleNextAction}
+          disabled={isUpdating}
+          loading={isUpdating}
+        />
       )}
 
-      {!nextAction && (
-        <Pressable style={styles.homeButton} onPress={() => router.replace('/(driver)')}>
-          <Text style={styles.homeButtonText}>Retour à l'accueil</Text>
-        </Pressable>
-      )}
+      {!nextAction && <Button title="Retour à l'accueil" onPress={() => router.replace('/(driver)')} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', gap: 24 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  statusText: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
-  details: { gap: 8, alignItems: 'center' },
-  detailText: { fontSize: 14, color: '#555' },
-  priceText: { fontSize: 22, fontWeight: '700', color: '#1a73e8', marginTop: 8 },
-  actionButton: { backgroundColor: '#2e7d32', borderRadius: 8, padding: 16, alignItems: 'center' },
-  actionButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  homeButton: { backgroundColor: '#1a73e8', borderRadius: 8, padding: 16, alignItems: 'center' },
-  homeButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  container: {
+    flex: 1,
+    padding: spacing.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.lg,
+    backgroundColor: colors.background,
+  },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+  statusText: { ...typography.subtitle, color: colors.text, textAlign: 'center' },
+  details: { gap: spacing.sm, alignItems: 'center' },
+  detailText: { ...typography.body, color: colors.textSecondary },
+  priceText: { ...typography.price, color: colors.primary, marginTop: spacing.xs },
 });

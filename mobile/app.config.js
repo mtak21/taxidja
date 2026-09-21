@@ -23,7 +23,7 @@ module.exports = {
       package: 'com.taxidja.app',
       versionCode: 1,
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
+        backgroundColor: '#D97D3D',
         foregroundImage: './assets/android-icon-foreground.png',
         backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
@@ -47,9 +47,9 @@ module.exports = {
         'expo-splash-screen',
         {
           image: './assets/splash-icon.png',
-          imageWidth: 200,
+          imageWidth: 180,
           resizeMode: 'contain',
-          backgroundColor: '#E6F4FE',
+          backgroundColor: '#D97D3D',
         },
       ],
       [

@@ -3,6 +3,10 @@ import { Map, Camera, Marker, type MapProps } from '@maplibre/maplibre-react-nat
 import type { Coordinates } from '../hooks/useLocation';
 import { MapErrorBoundary } from './MapErrorBoundary';
 import { OSM_STYLE } from '../config/osmMapStyle';
+import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
+import { radius } from '../theme/radius';
+import { typography } from '../theme/typography';
 
 interface DestinationPickerProps {
   pickup: Coordinates | null;
@@ -46,24 +50,24 @@ export function DestinationPicker({ pickup, destination, onSelectDestination }: 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  container: { flex: 1, borderRadius: radius.lg, overflow: 'hidden' },
   pin: {
     width: 18,
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.surface,
   },
-  pickupPin: { backgroundColor: '#1a73e8' },
-  destinationPin: { backgroundColor: '#d32f2f' },
+  pickupPin: { backgroundColor: colors.primary },
+  destinationPin: { backgroundColor: colors.danger },
   hintBanner: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 8,
-    padding: 8,
+    top: spacing.md,
+    left: spacing.md,
+    right: spacing.md,
+    backgroundColor: colors.dark,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
   },
-  hintText: { color: '#fff', textAlign: 'center', fontSize: 12 },
+  hintText: { ...typography.small, color: colors.textOnPrimary, textAlign: 'center' },
 });

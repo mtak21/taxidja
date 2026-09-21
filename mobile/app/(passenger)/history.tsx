@@ -1,6 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { RideHistoryList } from '../../src/components/RideHistoryList';
+import { colors } from '../../src/theme/colors';
 
 export default function PassengerHistoryScreen() {
   return (
@@ -12,5 +13,5 @@ export default function PassengerHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.background },
 });

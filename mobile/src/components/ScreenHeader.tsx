@@ -1,5 +1,8 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useLogout } from '../hooks/useLogout';
+import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
+import { typography } from '../theme/typography';
 
 export function ScreenHeader({ title }: { title: string }) {
   const handleLogout = useLogout();
@@ -7,7 +10,7 @@ export function ScreenHeader({ title }: { title: string }) {
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>{title}</Text>
-      <Pressable onPress={handleLogout}>
+      <Pressable hitSlop={8} onPress={handleLogout}>
         <Text style={styles.logoutText}>Déconnexion</Text>
       </Pressable>
     </View>
@@ -19,11 +22,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
     paddingTop: 56,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border,
   },
-  headerTitle: { fontSize: 18, fontWeight: '600' },
-  logoutText: { color: '#d32f2f', fontWeight: '600' },
+  headerTitle: { ...typography.subtitle, color: colors.text },
+  logoutText: { ...typography.smallMedium, color: colors.danger },
 });

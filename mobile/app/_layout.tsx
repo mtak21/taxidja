@@ -3,6 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import { api } from '../src/services/api';
+import { colors } from '../src/theme/colors';
 
 export default function RootLayout() {
   const hydrate = useAuthStore((state) => state.hydrate);
@@ -27,11 +28,11 @@ export default function RootLayout() {
 
   if (!isHydrated || (isAuthenticated && !user)) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />;
 }

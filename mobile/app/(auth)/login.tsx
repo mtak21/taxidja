@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,11 @@ import { AxiosError } from 'axios';
 import { loginRequest } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
 import { homeRouteForRole } from '../../src/utils/roleRoutes';
+import { Input } from '../../src/components/ui/Input';
+import { Button } from '../../src/components/ui/Button';
+import { colors } from '../../src/theme/colors';
+import { spacing } from '../../src/theme/spacing';
+import { typography } from '../../src/theme/typography';
 
 const loginSchema = z.object({
   phone: z.string().trim().min(8, 'Numéro de téléphone invalide'),
@@ -48,14 +53,20 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.brandBlock}>
+        <View style={styles.logoCircle}>
+          <Image source={require('../../assets/splash-icon.png')} style={styles.logoImage} resizeMode="contain" />
+        </View>
+        <Text style={styles.brand}>TaxiDja</Text>
+      </View>
+
       <Text style={styles.title}>Connexion</Text>
 
       <Controller
         control={control}
         name="phone"
         render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            style={styles.input}
+          <Input
             placeholder="Téléphone"
             keyboardType="phone-pad"
             autoCapitalize="none"
@@ -71,8 +82,7 @@ export default function LoginScreen() {
         control={control}
         name="password"
         render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            style={styles.input}
+          <Input
             placeholder="Mot de passe"
             secureTextEntry
             onBlur={onBlur}
@@ -85,9 +95,12 @@ export default function LoginScreen() {
 
       {serverError && <Text style={styles.error}>{serverError}</Text>}
 
-      <Pressable style={styles.button} onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
-        <Text style={styles.buttonText}>{isSubmitting ? 'Connexion...' : 'Se connecter'}</Text>
-      </Pressable>
+      <Button
+        title={isSubmitting ? 'Connexion...' : 'Se connecter'}
+        onPress={handleSubmit(onSubmit)}
+        disabled={isSubmitting}
+        loading={isSubmitting}
+      />
 
       <Link href="/(auth)/register" style={styles.link}>
         Pas de compte ? S'inscrire
@@ -97,11 +110,19 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontSize: 24, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 },
-  error: { color: '#d32f2f', fontSize: 13 },
-  button: { backgroundColor: '#1a73e8', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 8 },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  link: { textAlign: 'center', marginTop: 16, color: '#1a73e8' },
+  container: { flex: 1, justifyContent: 'center', padding: spacing.xl, gap: spacing.md, backgroundColor: colors.background },
+  brandBlock: { alignItems: 'center', marginBottom: spacing.lg, gap: spacing.sm },
+  logoCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoImage: { width: 36, height: 36 },
+  brand: { ...typography.brand, color: colors.dark },
+  title: { ...typography.title, color: colors.text, marginBottom: spacing.sm, textAlign: 'center' },
+  error: { ...typography.small, color: colors.danger },
+  link: { textAlign: 'center', marginTop: spacing.lg, color: colors.primary, ...typography.smallMedium },
 });

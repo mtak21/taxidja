@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   getRide,
@@ -12,6 +12,13 @@ import {
 } from '../../../src/services/ride';
 import { connectSocket, disconnectSocket } from '../../../src/services/socket';
 import { StarRating } from '../../../src/components/StarRating';
+import { Button } from '../../../src/components/ui/Button';
+import { Card } from '../../../src/components/ui/Card';
+import { Input } from '../../../src/components/ui/Input';
+import { RideStatusBadge } from '../../../src/components/ui/Badge';
+import { colors } from '../../../src/theme/colors';
+import { spacing } from '../../../src/theme/spacing';
+import { typography } from '../../../src/theme/typography';
 
 const STATUS_LABELS: Record<Ride['status'], string> = {
   REQUESTED: 'Recherche d\'un conducteur...',
@@ -150,7 +157,7 @@ export default function RideStatusScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -158,7 +165,7 @@ export default function RideStatusScreen() {
   if (!ride) {
     return (
       <View style={styles.center}>
-        <Text>Course introuvable.</Text>
+        <Text style={typography.body}>Course introuvable.</Text>
       </View>
     );
   }
@@ -169,7 +176,10 @@ export default function RideStatusScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.statusBox}>
-        {SEARCHING_STATUSES.includes(ride.status) && <ActivityIndicator size="large" style={styles.spinner} />}
+        {SEARCHING_STATUSES.includes(ride.status) && (
+          <ActivityIndicator size="large" color={colors.primary} style={styles.spinner} />
+        )}
+        <RideStatusBadge status={ride.status} />
         <Text style={styles.statusText}>{STATUS_LABELS[ride.status]}</Text>
         {ride.status === 'CANCELLED' && noDriverMessage && (
           <Text style={styles.noDriverText}>Aucun conducteur disponible pour le moment. Réessaie dans quelques minutes.</Text>
@@ -177,7 +187,7 @@ export default function RideStatusScreen() {
       </View>
 
       {ride.driver && (
-        <View style={styles.driverBox}>
+        <Card style={styles.driverBox}>
           <Text style={styles.driverName}>
             {ride.driver.firstName} {ride.driver.lastName}
           </Text>
@@ -185,7 +195,7 @@ export default function RideStatusScreen() {
           {etaMinutes !== null && !isCompleted && (
             <Text style={styles.detailText}>Arrivée estimée : {etaMinutes} min</Text>
           )}
-        </View>
+        </Card>
       )}
 
       <View style={styles.details}>
@@ -200,70 +210,60 @@ export default function RideStatusScreen() {
       </View>
 
       {canCancel && (
-        <Pressable style={styles.cancelButton} onPress={handleCancel} disabled={isCancelling}>
-          <Text style={styles.cancelButtonText}>{isCancelling ? 'Annulation...' : 'Annuler la course'}</Text>
-        </Pressable>
+        <Button
+          title={isCancelling ? 'Annulation...' : 'Annuler la course'}
+          variant="danger"
+          onPress={handleCancel}
+          disabled={isCancelling}
+          loading={isCancelling}
+        />
       )}
 
       {isCompleted && !hasRated && (
-        <View style={styles.ratingBox}>
+        <Card style={styles.ratingBox}>
           <Text style={styles.ratingTitle}>Note ton conducteur</Text>
-          <StarRating value={ratingScore} onChange={setRatingScore} disabled={isSubmittingRating} />
-          <TextInput
-            style={styles.commentInput}
+          <View style={styles.starsWrap}>
+            <StarRating value={ratingScore} onChange={setRatingScore} disabled={isSubmittingRating} />
+          </View>
+          <Input
             placeholder="Commentaire (optionnel)"
             value={ratingComment}
             onChangeText={setRatingComment}
             editable={!isSubmittingRating}
             multiline
+            style={styles.commentInput}
           />
-          <Pressable style={styles.actionButton} onPress={handleSubmitRating} disabled={isSubmittingRating}>
-            <Text style={styles.actionButtonText}>{isSubmittingRating ? 'Envoi...' : 'Envoyer la note'}</Text>
-          </Pressable>
-          <Pressable onPress={() => setHasRated(true)} disabled={isSubmittingRating}>
-            <Text style={styles.skipText}>Passer</Text>
-          </Pressable>
-        </View>
+          <Button
+            title={isSubmittingRating ? 'Envoi...' : 'Envoyer la note'}
+            onPress={handleSubmitRating}
+            disabled={isSubmittingRating}
+            loading={isSubmittingRating}
+          />
+          <Button title="Passer" variant="secondary" onPress={() => setHasRated(true)} disabled={isSubmittingRating} />
+        </Card>
       )}
 
       {!canCancel && (!isCompleted || hasRated) && (
-        <Pressable style={styles.homeButton} onPress={() => router.replace('/(passenger)')}>
-          <Text style={styles.homeButtonText}>Retour à l'accueil</Text>
-        </Pressable>
+        <Button title="Retour à l'accueil" onPress={() => router.replace('/(passenger)')} />
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', gap: 24 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  statusBox: { alignItems: 'center', gap: 16 },
-  spinner: { marginBottom: 8 },
-  statusText: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
-  noDriverText: { fontSize: 13, color: '#d32f2f', textAlign: 'center' },
-  driverBox: { alignItems: 'center', gap: 4, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 16 },
-  driverName: { fontSize: 16, fontWeight: '700' },
-  details: { gap: 8, alignItems: 'center' },
-  detailText: { fontSize: 14, color: '#555' },
-  priceText: { fontSize: 22, fontWeight: '700', color: '#1a73e8', marginTop: 8 },
-  cancelButton: { backgroundColor: '#d32f2f', borderRadius: 8, padding: 16, alignItems: 'center' },
-  cancelButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  homeButton: { backgroundColor: '#1a73e8', borderRadius: 8, padding: 16, alignItems: 'center' },
-  homeButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  ratingBox: { alignItems: 'center', gap: 12, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 16 },
-  ratingTitle: { fontSize: 16, fontWeight: '600' },
-  commentInput: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    minHeight: 48,
-    backgroundColor: '#fff',
-  },
-  actionButton: { backgroundColor: '#2e7d32', borderRadius: 8, padding: 16, alignItems: 'center', width: '100%' },
-  actionButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  skipText: { color: '#888', fontSize: 14 },
+  container: { flex: 1, padding: spacing.xl, justifyContent: 'center', gap: spacing.xl, backgroundColor: colors.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
+  statusBox: { alignItems: 'center', gap: spacing.md },
+  spinner: { marginBottom: spacing.xs },
+  statusText: { ...typography.subtitle, color: colors.text, textAlign: 'center' },
+  noDriverText: { ...typography.small, color: colors.danger, textAlign: 'center' },
+  driverBox: { alignItems: 'center', gap: spacing.xs },
+  driverName: { ...typography.bodyMedium, color: colors.text },
+  details: { gap: spacing.sm, alignItems: 'center' },
+  detailText: { ...typography.body, color: colors.textSecondary },
+  priceText: { ...typography.price, color: colors.primary, marginTop: spacing.xs },
+  ratingBox: { gap: spacing.md },
+  ratingTitle: { ...typography.bodyMedium, color: colors.text, textAlign: 'center' },
+  starsWrap: { alignItems: 'center' },
+  commentInput: { minHeight: 48 },
 });

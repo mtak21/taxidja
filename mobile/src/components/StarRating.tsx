@@ -1,4 +1,6 @@
 import { View, Pressable, Text, StyleSheet } from 'react-native';
+import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
 
 interface StarRatingProps {
   value: number;
@@ -19,7 +21,7 @@ export function StarRating({ value, onChange, disabled }: StarRatingProps) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8 },
-  star: { fontSize: 36, color: '#ccc' },
-  starFilled: { color: '#f5a623' },
+  row: { flexDirection: 'row', gap: spacing.sm },
+  star: { fontSize: 36, color: colors.border },
+  starFilled: { color: colors.primary },
 });

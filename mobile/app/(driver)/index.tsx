@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Switch, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
@@ -10,6 +10,12 @@ import { useDriverLocationTracking } from '../../src/hooks/useDriverLocationTrac
 import { updateDriverStatus } from '../../src/services/driver';
 import { connectSocket, disconnectSocket } from '../../src/services/socket';
 import type { RideRequestPayload } from '../../src/services/ride';
+import { Button } from '../../src/components/ui/Button';
+import { Badge } from '../../src/components/ui/Badge';
+import { colors } from '../../src/theme/colors';
+import { spacing } from '../../src/theme/spacing';
+import { radius } from '../../src/theme/radius';
+import { typography } from '../../src/theme/typography';
 
 export default function DriverHome() {
   const user = useAuthStore((state) => state.user);
@@ -67,13 +73,22 @@ export default function DriverHome() {
       <ScreenHeader title={`Bonjour ${user?.firstName ?? ''}`} />
 
       <View style={styles.statusRow}>
-        <Text style={styles.statusLabel}>{isOnline ? 'En ligne' : 'Hors ligne'}</Text>
-        <Switch value={isOnline} onValueChange={handleToggle} disabled={isUpdatingStatus} />
+        <View style={styles.statusLeft}>
+          <Text style={styles.statusLabel}>{isOnline ? 'En ligne' : 'Hors ligne'}</Text>
+          <Badge label={isOnline ? 'Disponible' : 'Indisponible'} tone={isOnline ? 'positive' : 'neutral'} />
+        </View>
+        <Switch
+          value={isOnline}
+          onValueChange={handleToggle}
+          disabled={isUpdatingStatus}
+          trackColor={{ true: colors.secondary, false: colors.border }}
+          thumbColor={colors.surface}
+        />
       </View>
 
-      <Pressable style={styles.historyButton} onPress={() => router.push('/(driver)/history')}>
-        <Text style={styles.historyButtonText}>Mes courses</Text>
-      </Pressable>
+      <View style={styles.historyButtonWrap}>
+        <Button title="Mes courses" variant="secondary" onPress={() => router.push('/(driver)/history')} />
+      </View>
 
       <View style={styles.mapArea}>
         <AppMap
@@ -96,34 +111,26 @@ export default function DriverHome() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.background },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
+  statusLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   mapArea: { flex: 2 },
   requestsPlaceholder: {
     flex: 1,
-    margin: 16,
+    margin: spacing.lg,
     marginTop: 0,
-    borderRadius: 12,
-    backgroundColor: '#f5f5f5',
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statusLabel: { fontSize: 16, fontWeight: '600' },
-  requestsPlaceholderText: { color: '#666', fontSize: 16 },
-  historyButton: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-  },
-  historyButtonText: { color: '#1a73e8', fontWeight: '600', fontSize: 14 },
+  statusLabel: { ...typography.bodyMedium, color: colors.text },
+  requestsPlaceholderText: { ...typography.body, color: colors.textSecondary },
+  historyButtonWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
 });

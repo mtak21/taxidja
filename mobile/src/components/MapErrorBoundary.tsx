@@ -1,5 +1,8 @@
 import { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
+import { typography } from '../theme/typography';
 
 interface Props {
   children: ReactNode;
@@ -37,8 +40,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#e0e0e0',
+    padding: spacing.xl,
+    backgroundColor: colors.border,
   },
-  text: { textAlign: 'center', color: '#444' },
+  text: { ...typography.body, textAlign: 'center', color: colors.textSecondary },
 });

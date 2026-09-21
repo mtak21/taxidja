@@ -1,9 +1,12 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { AppMap } from '../../src/components/AppMap';
 import { useLocation } from '../../src/hooks/useLocation';
+import { Button } from '../../src/components/ui/Button';
+import { colors } from '../../src/theme/colors';
+import { spacing } from '../../src/theme/spacing';
 
 export default function PassengerHome() {
   const user = useAuthStore((state) => state.user);
@@ -24,36 +27,15 @@ export default function PassengerHome() {
         markerTitle="Ma position"
       />
 
-      <Pressable style={styles.reserveButton} onPress={handleReserve}>
-        <Text style={styles.reserveButtonText}>Réserver une course</Text>
-      </Pressable>
-
-      <Pressable style={styles.historyButton} onPress={() => router.push('/(passenger)/history')}>
-        <Text style={styles.historyButtonText}>Mes courses</Text>
-      </Pressable>
+      <View style={styles.actions}>
+        <Button title="Réserver une course" onPress={handleReserve} />
+        <Button title="Mes courses" variant="secondary" onPress={() => router.push('/(passenger)/history')} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  reserveButton: {
-    margin: 16,
-    marginTop: 0,
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  reserveButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  historyButton: {
-    margin: 16,
-    marginTop: 0,
-    borderWidth: 1,
-    borderColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  historyButtonText: { color: '#1a73e8', fontWeight: '600', fontSize: 16 },
+  container: { flex: 1, backgroundColor: colors.background },
+  actions: { padding: spacing.lg, paddingTop: 0, gap: spacing.md },
 });
