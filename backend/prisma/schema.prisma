@@ -44,6 +44,10 @@ model User {
   passwordHash  String
   role          UserRole       @default(PASSENGER)
   isActive      Boolean        @default(true)
+  // Relative path under /uploads (e.g. "/uploads/avatars/xxx.jpg"), not a
+  // full URL — the mobile app prefixes it with its own API base URL, same
+  // as every other backend call (see mobile/src/services/api.ts).
+  avatarUrl     String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]

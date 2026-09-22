@@ -56,11 +56,12 @@ async function issueTokenPair(user: User) {
 }
 
 // The auth responses (register/login/refresh/me) all return the same "safe
-// user" shape, extended with the driver's verification status when the
-// account is a DRIVER — the mobile app uses this to show the
-// pending-verification state without a dedicated endpoint or real-time push;
-// it's simply picked up on the next call that returns a user (e.g. /auth/me
-// on the driver home screen mounting).
+// user" shape (now including avatarUrl, a plain User column), extended with
+// driver-specific fields when the account is a DRIVER — verification status,
+// rating, license, and vehicles. The mobile app uses this to show the
+// pending-verification state and profile screen without extra endpoints or
+// real-time push; it's simply picked up on the next call that returns a user
+// (e.g. /auth/me on the driver home/profile screens mounting).
 async function buildAuthUser(user: User) {
   const { passwordHash, ...safeUser } = user;
 
@@ -70,10 +71,25 @@ async function buildAuthUser(user: User) {
 
   const driver = await prisma.driver.findUnique({
     where: { userId: user.id },
-    select: { verificationStatus: true },
+    select: {
+      verificationStatus: true,
+      rating: true,
+      licenseNumber: true,
+      licenseExpiry: true,
+      vehicles: {
+        select: { id: true, type: true, brand: true, model: true, plate: true, color: true, isActive: true },
+      },
+    },
   });
 
-  return { ...safeUser, driverVerificationStatus: driver?.verificationStatus ?? null };
+  return {
+    ...safeUser,
+    driverVerificationStatus: driver?.verificationStatus ?? null,
+    driverRating: driver?.rating ?? null,
+    driverLicenseNumber: driver?.licenseNumber ?? null,
+    driverLicenseExpiry: driver?.licenseExpiry ?? null,
+    vehicles: driver?.vehicles ?? [],
+  };
 }
 
 export async function register(input: RegisterInput) {

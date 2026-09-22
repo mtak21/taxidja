@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { saveTokens, loadTokens, clearTokens } from '../services/secureStorage';
 
+export interface AuthUserVehicle {
+  id: string;
+  type: 'MOTO' | 'RAKCHA' | 'CAR';
+  brand: string | null;
+  model: string | null;
+  plate: string | null;
+  color: string | null;
+  isActive: boolean;
+}
+
 export interface AuthUser {
   id: string;
   firstName: string;
@@ -8,12 +18,17 @@ export interface AuthUser {
   phone: string;
   email?: string | null;
   role: 'PASSENGER' | 'DRIVER' | 'ADMIN';
-  // Only meaningful when role === 'DRIVER' — null otherwise. Refreshed by
-  // re-fetching the current user (see fetchMe in services/auth.ts), not
-  // pushed in real time: the driver home screen re-fetches it on mount, so
-  // an admin's validation shows up next time the driver opens/foregrounds
-  // the app.
+  avatarUrl?: string | null;
+  // Only meaningful when role === 'DRIVER' — null/empty otherwise. Refreshed
+  // by re-fetching the current user (see fetchMe in services/auth.ts), not
+  // pushed in real time: the driver home/profile screens re-fetch it on
+  // mount, so an admin's validation or a vehicle edit shows up next time the
+  // driver opens/foregrounds the app.
   driverVerificationStatus?: 'PENDING' | 'VERIFIED' | 'SUSPENDED' | null;
+  driverRating?: number | null;
+  driverLicenseNumber?: string | null;
+  driverLicenseExpiry?: string | null;
+  vehicles?: AuthUserVehicle[];
 }
 
 interface AuthState {

@@ -18,7 +18,7 @@ export default function PassengerHome() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title={`Bonjour ${user?.firstName ?? ''}`} />
+      <ScreenHeader title={`Bonjour ${user?.firstName ?? ''}`} onProfilePress={() => router.push('/(passenger)/profile')} />
 
       <AppMap
         coordinates={coordinates}

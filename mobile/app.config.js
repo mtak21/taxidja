@@ -59,6 +59,12 @@ module.exports = {
             "TaxiDja a besoin de votre position pour afficher la carte et proposer des courses à proximité.",
         },
       ],
+      [
+        'expo-image-picker',
+        {
+          photosPermission: "TaxiDja a besoin d'accéder à vos photos pour changer votre photo de profil.",
+        },
+      ],
     ],
     extra: {
       eas: {

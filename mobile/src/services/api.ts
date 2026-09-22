@@ -1,7 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const baseURL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000';
+// Exported so screens can build absolute URLs for server-relative paths the
+// API returns (e.g. avatarUrl: "/uploads/avatars/xxx.jpg").
+export const baseURL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000';
 
 export const api = axios.create({ baseURL });
 

@@ -45,6 +45,9 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 
+# === User uploads (backend, local disk storage) ===
+backend/uploads/
+
 # === Coverage / tests ===
 coverage/
 

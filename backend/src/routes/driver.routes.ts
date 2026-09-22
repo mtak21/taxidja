@@ -10,5 +10,7 @@ router.use(authMiddleware, requireRole(UserRole.DRIVER));
 
 router.patch('/location', driverController.updateLocation);
 router.patch('/status', driverController.updateStatus);
+router.post('/vehicle', driverController.addVehicle);
+router.patch('/vehicle/:id', driverController.updateVehicle);
 
 export default router;

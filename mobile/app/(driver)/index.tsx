@@ -98,7 +98,7 @@ export default function DriverHome() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title={`Bonjour ${user?.firstName ?? ''}`} />
+      <ScreenHeader title={`Bonjour ${user?.firstName ?? ''}`} onProfilePress={() => router.push('/(driver)/profile')} />
 
       <View style={styles.statusRow}>
         <View style={styles.statusLeft}>
