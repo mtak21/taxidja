@@ -146,6 +146,39 @@ export async function startRide(rideId: string, userId: string) {
 // meters of difference, and re-pricing for that would be noise, not signal.
 const FINAL_DISTANCE_TOLERANCE_KM = 0.1;
 
+// Above this, the driver's "current position" is too implausible to trust
+// for a final-price recalculation on an urban trip — almost certainly a bad
+// GPS reading (e.g. a reading near (0, lng) / "null island"), not a real
+// 50km+ detour on a city ride.
+const MAX_PLAUSIBLE_ACTUAL_DISTANCE_KM = 50;
+
+/**
+ * Whether driver.currentLatitude/currentLongitude can be trusted as "roughly
+ * where this ride ended", checked *before* it's ever used for pricing:
+ *
+ * - present at all (a driver who never reported a position has none)
+ * - fresh relative to this specific ride — reported at/after the ride's own
+ *   startedAt. A position from before the ride started isn't stale GPS
+ *   noise, it's a position that predates the trip entirely: tracking never
+ *   sent a single update while this ride was in progress (never (re)started,
+ *   interrupted, backgrounded, or the driver simply completed the ride
+ *   faster than the first 15s/50m tracking tick — see
+ *   useDriverLocationTracking on the mobile side). Trusting it silently
+ *   recomputes a near-zero distance from pickup, which is exactly what
+ *   produced "final price always equals the base fare" in practice.
+ * - not a known-bad sentinel coordinate (exactly (0, 0), "null island" —
+ *   never a real position for this Chad-based app)
+ */
+function isDriverPositionTrustworthy(
+  driver: { currentLatitude: number | null; currentLongitude: number | null; lastLocationUpdate: Date | null },
+  ride: { startedAt: Date | null },
+): driver is { currentLatitude: number; currentLongitude: number; lastLocationUpdate: Date } {
+  if (driver.currentLatitude === null || driver.currentLongitude === null) return false;
+  if (driver.currentLatitude === 0 && driver.currentLongitude === 0) return false;
+  if (!ride.startedAt || !driver.lastLocationUpdate) return false;
+  return driver.lastLocationUpdate >= ride.startedAt;
+}
+
 export async function completeRide(rideId: string, userId: string) {
   const result = await getRideForDriverTransition(rideId, userId, RideStatus.IN_PROGRESS);
   if ('error' in result) return result;
@@ -153,11 +186,19 @@ export async function completeRide(rideId: string, userId: string) {
 
   // Recompute from the driver's last known position (continuously tracked
   // while online) as a proxy for where the trip actually ended. If it's
-  // unavailable, or ends up essentially at the planned destination, we
-  // simply keep estimatedPrice rather than force a recalculation.
+  // unavailable, stale, implausible, or ends up essentially at the planned
+  // destination, we simply keep estimatedPrice rather than force a
+  // recalculation from a value we can't trust.
   let finalPrice = ride.estimatedPrice;
+  const logPrefix = `[ride.service] completeRide(${rideId})`;
 
-  if (driver.currentLatitude !== null && driver.currentLongitude !== null) {
+  if (!isDriverPositionTrustworthy(driver, ride)) {
+    console.log(
+      `${logPrefix}: driver position not trustworthy (currentLatitude=${driver.currentLatitude}, ` +
+        `currentLongitude=${driver.currentLongitude}, lastLocationUpdate=${driver.lastLocationUpdate?.toISOString() ?? 'null'}, ` +
+        `rideStartedAt=${ride.startedAt?.toISOString() ?? 'null'}) — keeping estimatedPrice (${finalPrice} FCFA).`,
+    );
+  } else {
     // ride.distance is now a road-route distance (see routing.service.ts),
     // so the comparison here must use the same road-route metric — comparing
     // it against a Haversine straight-line distance would almost always look
@@ -169,8 +210,22 @@ export async function completeRide(rideId: string, userId: string) {
       ride.vehicleType,
     );
 
-    if (Math.abs(actualRoute.distanceKm - ride.distance) >= FINAL_DISTANCE_TOLERANCE_KM) {
+    if (actualRoute.distanceKm > MAX_PLAUSIBLE_ACTUAL_DISTANCE_KM) {
+      console.warn(
+        `${logPrefix}: driver position (${driver.currentLatitude}, ${driver.currentLongitude}) is ` +
+          `${actualRoute.distanceKm}km from pickup — implausible for an urban trip, keeping estimatedPrice (${finalPrice} FCFA).`,
+      );
+    } else if (Math.abs(actualRoute.distanceKm - ride.distance) >= FINAL_DISTANCE_TOLERANCE_KM) {
       finalPrice = await calculatePrice(actualRoute.distanceKm, ride.vehicleType);
+      console.log(
+        `${logPrefix}: recalculated final price from driver position (${driver.currentLatitude}, ${driver.currentLongitude}) — ` +
+          `actual distance ${actualRoute.distanceKm}km (planned ${ride.distance}km), final price ${finalPrice} FCFA (was estimated ${ride.estimatedPrice} FCFA).`,
+      );
+    } else {
+      console.log(
+        `${logPrefix}: actual distance ${actualRoute.distanceKm}km matches planned ${ride.distance}km within tolerance — ` +
+          `keeping estimatedPrice (${finalPrice} FCFA).`,
+      );
     }
   }
 
