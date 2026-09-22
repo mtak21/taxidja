@@ -21,7 +21,7 @@ module.exports = {
     },
     android: {
       package: 'com.taxidja.app',
-      versionCode: 3,
+      versionCode: 4,
       adaptiveIcon: {
         backgroundColor: '#D97D3D',
         foregroundImage: './assets/android-icon-foreground.png',
