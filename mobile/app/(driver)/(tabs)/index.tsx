@@ -2,23 +2,21 @@ import { useEffect, useState } from 'react';
 import { View, Text, Switch, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { AxiosError } from 'axios';
-import { useAuthStore } from '../../src/store/authStore';
-import { ScreenHeader } from '../../src/components/ScreenHeader';
-import { AppMap } from '../../src/components/AppMap';
-import { RideRequestModal } from '../../src/components/RideRequestModal';
-import { useLocation } from '../../src/hooks/useLocation';
-import { useDriverLocationTracking } from '../../src/hooks/useDriverLocationTracking';
-import { updateDriverStatus } from '../../src/services/driver';
-import { fetchMe } from '../../src/services/auth';
-import { connectSocket, disconnectSocket } from '../../src/services/socket';
-import type { RideRequestPayload } from '../../src/services/ride';
-import { Button } from '../../src/components/ui/Button';
-import { Badge } from '../../src/components/ui/Badge';
-import { Card } from '../../src/components/ui/Card';
-import { colors } from '../../src/theme/colors';
-import { spacing } from '../../src/theme/spacing';
-import { radius } from '../../src/theme/radius';
-import { typography } from '../../src/theme/typography';
+import { useAuthStore } from '../../../src/store/authStore';
+import { AppMap } from '../../../src/components/AppMap';
+import { RideRequestModal } from '../../../src/components/RideRequestModal';
+import { useLocation } from '../../../src/hooks/useLocation';
+import { useDriverLocationTracking } from '../../../src/hooks/useDriverLocationTracking';
+import { updateDriverStatus } from '../../../src/services/driver';
+import { fetchMe } from '../../../src/services/auth';
+import { connectSocket, disconnectSocket } from '../../../src/services/socket';
+import type { RideRequestPayload } from '../../../src/services/ride';
+import { Badge } from '../../../src/components/ui/Badge';
+import { Card } from '../../../src/components/ui/Card';
+import { colors } from '../../../src/theme/colors';
+import { spacing } from '../../../src/theme/spacing';
+import { radius } from '../../../src/theme/radius';
+import { typography } from '../../../src/theme/typography';
 
 const VERIFICATION_MESSAGES: Record<'PENDING' | 'SUSPENDED', string> = {
   PENDING: "Ton compte est en cours de vérification. Tu seras notifié une fois validé — tu ne peux pas encore passer en ligne.",
@@ -98,8 +96,6 @@ export default function DriverHome() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title={`Bonjour ${user?.firstName ?? ''}`} onProfilePress={() => router.push('/(driver)/profile')} />
-
       <View style={styles.statusRow}>
         <View style={styles.statusLeft}>
           <Text style={styles.statusLabel}>{isOnline ? 'En ligne' : 'Hors ligne'}</Text>
@@ -126,11 +122,6 @@ export default function DriverHome() {
         </View>
       )}
 
-      <View style={styles.historyButtonWrap}>
-        <Button title="Mes courses" variant="secondary" onPress={() => router.push('/(driver)/history')} />
-        <Button title="Mes revenus" variant="secondary" onPress={() => router.push('/(driver)/earnings')} />
-      </View>
-
       <View style={styles.mapArea}>
         <AppMap
           coordinates={coordinates}
@@ -152,7 +143,7 @@ export default function DriverHome() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, paddingTop: 56, backgroundColor: colors.background },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -176,5 +167,4 @@ const styles = StyleSheet.create({
   },
   statusLabel: { ...typography.bodyMedium, color: colors.text },
   requestsPlaceholderText: { ...typography.body, color: colors.textSecondary },
-  historyButtonWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.md, gap: spacing.sm },
 });

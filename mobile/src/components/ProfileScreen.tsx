@@ -448,10 +448,7 @@ export function ProfileScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.backText}>← Retour</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Profil</Text>
+        <Text style={styles.headerTitle}>Compte</Text>
       </View>
 
       <View style={styles.identityBlock}>
@@ -485,8 +482,7 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, paddingTop: 40, paddingBottom: spacing.sm },
-  backText: { ...typography.smallMedium, color: colors.primary },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, paddingTop: 56, paddingBottom: spacing.sm },
   headerTitle: { ...typography.subtitle, color: colors.text },
   identityBlock: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
   avatarWrap: { width: 96, height: 96 },
