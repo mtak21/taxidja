@@ -80,19 +80,34 @@ export async function getRide(req: Request, res: Response) {
     }
 
     const { driver, passenger, ...rideFields } = ride;
+    const activeVehicle = driver?.vehicles[0];
     const safeDriver = driver
       ? {
           id: driver.id,
           rating: driver.rating,
           firstName: driver.user.firstName,
           lastName: driver.user.lastName,
+          avatarUrl: driver.user.avatarUrl,
+          // Phone is only ever exposed to this ride's own passenger/driver/an
+          // admin — the same authorization check above already gates the
+          // whole response, not just this field.
+          phone: driver.user.phone,
+          vehicle: activeVehicle
+            ? {
+                type: activeVehicle.type,
+                brand: activeVehicle.brand,
+                model: activeVehicle.model,
+                plate: activeVehicle.plate,
+                color: activeVehicle.color,
+              }
+            : null,
           // Seeds the passenger's live-tracking marker before the first
           // driver:position_update socket tick arrives.
           currentLatitude: driver.currentLatitude,
           currentLongitude: driver.currentLongitude,
         }
       : null;
-    const safePassenger = { firstName: passenger.firstName, lastName: passenger.lastName };
+    const safePassenger = { firstName: passenger.firstName, lastName: passenger.lastName, phone: passenger.phone };
 
     return res.status(200).json({ ride: { ...rideFields, driver: safeDriver, passenger: safePassenger } });
   } catch (error) {

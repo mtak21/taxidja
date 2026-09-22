@@ -52,7 +52,10 @@ export async function createRide(params: CreateRideParams) {
 export async function getRideById(id: string) {
   return prisma.ride.findUnique({
     where: { id },
-    include: { driver: { include: { user: true } }, passenger: true },
+    include: {
+      driver: { include: { user: true, vehicles: { where: { isActive: true }, take: 1 } } },
+      passenger: true,
+    },
   });
 }
 

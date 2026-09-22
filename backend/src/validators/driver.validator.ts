@@ -29,7 +29,12 @@ export const updateVehicleSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+export const earningsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+});
+
 export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
+export type EarningsQueryInput = z.infer<typeof earningsQuerySchema>;

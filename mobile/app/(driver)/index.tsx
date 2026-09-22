@@ -128,6 +128,7 @@ export default function DriverHome() {
 
       <View style={styles.historyButtonWrap}>
         <Button title="Mes courses" variant="secondary" onPress={() => router.push('/(driver)/history')} />
+        <Button title="Mes revenus" variant="secondary" onPress={() => router.push('/(driver)/earnings')} />
       </View>
 
       <View style={styles.mapArea}>
@@ -175,5 +176,5 @@ const styles = StyleSheet.create({
   },
   statusLabel: { ...typography.bodyMedium, color: colors.text },
   requestsPlaceholderText: { ...typography.body, color: colors.textSecondary },
-  historyButtonWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  historyButtonWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.md, gap: spacing.sm },
 });

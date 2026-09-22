@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Image, ScrollView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   getRide,
   cancelRide,
   rateRide,
+  estimateRide,
   type Ride,
+  type VehicleType,
   type DriverAssignedPayload,
   type RideLifecyclePayload,
   type RideCompletedPayload,
@@ -13,8 +16,10 @@ import {
 } from '../../../src/services/ride';
 import type { Coordinates } from '../../../src/hooks/useLocation';
 import { connectSocket, disconnectSocket } from '../../../src/services/socket';
+import { baseURL } from '../../../src/services/api';
 import { StarRating } from '../../../src/components/StarRating';
 import { RideTrackingMap } from '../../../src/components/RideTrackingMap';
+import { CallButton } from '../../../src/components/CallButton';
 import { Button } from '../../../src/components/ui/Button';
 import { Card } from '../../../src/components/ui/Card';
 import { Input } from '../../../src/components/ui/Input';
@@ -33,6 +38,12 @@ const STATUS_LABELS: Record<Ride['status'], string> = {
   CANCELLED: 'Course annulée',
 };
 
+const VEHICLE_LABELS: Record<VehicleType, string> = {
+  MOTO: 'Moto',
+  RAKCHA: 'Rakcha',
+  CAR: 'Voiture',
+};
+
 const SEARCHING_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING'];
 const CANCELLABLE_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING'];
 // Any non-terminal status: keep the socket connected across the whole trip,
@@ -40,6 +51,10 @@ const CANCELLABLE_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING'];
 const LIVE_STATUSES: Ride['status'][] = ['REQUESTED', 'SEARCHING', 'ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
 // A driver marker is only meaningful once a driver is assigned and en route/on trip.
 const TRACKABLE_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
+// The call button only makes sense once a driver is assigned and the trip isn't over yet.
+const CALLABLE_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
+// ETA is "time to pickup" specifically — meaningless once the passenger is already on board.
+const ETA_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING'];
 
 export default function RideStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -107,7 +122,21 @@ export default function RideStatusScreen() {
 
     const handlePositionUpdate = (payload: DriverPositionUpdatePayload) => {
       if (payload.rideId !== id) return;
-      setDriverPosition({ latitude: payload.latitude, longitude: payload.longitude });
+      const newPosition = { latitude: payload.latitude, longitude: payload.longitude };
+      setDriverPosition(newPosition);
+
+      // Recomputed on every driver:position_update (already throttled
+      // server-side to real location pushes, ~15s/50m — see
+      // useDriverLocationTracking), not on a separate faster timer, to stay
+      // within the public OSRM demo server's fair-use limits.
+      if (ride && ETA_STATUSES.includes(ride.status)) {
+        const pickup = { latitude: ride.pickupLatitude, longitude: ride.pickupLongitude };
+        estimateRide(newPosition, pickup, ride.vehicleType)
+          .then((result) => setEtaMinutes(result.estimatedDuration))
+          .catch(() => {
+            // Non-fatal — keep showing the last known ETA.
+          });
+      }
     };
 
     socket.on('ride:driver_assigned', handleAssigned);
@@ -215,12 +244,38 @@ export default function RideStatusScreen() {
 
         {ride.driver && (
           <Card style={styles.driverBox}>
-            <Text style={styles.driverName}>
-              {ride.driver.firstName} {ride.driver.lastName}
-            </Text>
-            <Text style={styles.detailText}>Note : {ride.driver.rating.toFixed(1)} / 5</Text>
-            {etaMinutes !== null && !isCompleted && (
+            <View style={styles.driverHeader}>
+              {ride.driver.avatarUrl ? (
+                <Image source={{ uri: `${baseURL}${ride.driver.avatarUrl}` }} style={styles.driverAvatar} />
+              ) : (
+                <View style={styles.driverAvatarPlaceholder}>
+                  <MaterialCommunityIcons name="account" size={28} color={colors.textOnPrimary} />
+                </View>
+              )}
+              <View style={styles.driverHeaderInfo}>
+                <Text style={styles.driverName}>
+                  {ride.driver.firstName} {ride.driver.lastName}
+                </Text>
+                <Text style={styles.detailText}>Note : {ride.driver.rating.toFixed(1)} / 5</Text>
+              </View>
+            </View>
+
+            {ride.driver.vehicle && (
+              <Text style={styles.detailText}>
+                {VEHICLE_LABELS[ride.driver.vehicle.type]}
+                {ride.driver.vehicle.brand ? ` ${ride.driver.vehicle.brand}` : ''}
+                {ride.driver.vehicle.model ? ` ${ride.driver.vehicle.model}` : ''}
+                {ride.driver.vehicle.color ? ` · ${ride.driver.vehicle.color}` : ''}
+                {ride.driver.vehicle.plate ? ` · ${ride.driver.vehicle.plate}` : ''}
+              </Text>
+            )}
+
+            {etaMinutes !== null && ETA_STATUSES.includes(ride.status) && (
               <Text style={styles.detailText}>Arrivée estimée : {etaMinutes} min</Text>
+            )}
+
+            {CALLABLE_STATUSES.includes(ride.status) && (
+              <CallButton phone={ride.driver.phone} label="Appeler le conducteur" />
             )}
           </Card>
         )}
@@ -287,7 +342,18 @@ const styles = StyleSheet.create({
   spinner: { marginBottom: spacing.xs },
   statusText: { ...typography.subtitle, color: colors.text, textAlign: 'center' },
   noDriverText: { ...typography.small, color: colors.danger, textAlign: 'center' },
-  driverBox: { alignItems: 'center', gap: spacing.xs },
+  driverBox: { gap: spacing.md },
+  driverHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  driverAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.border },
+  driverAvatarPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverHeaderInfo: { gap: spacing.xs },
   driverName: { ...typography.bodyMedium, color: colors.text },
   details: { gap: spacing.sm, alignItems: 'center' },
   detailText: { ...typography.body, color: colors.textSecondary },

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
-import { updateLocationSchema, updateStatusSchema, createVehicleSchema, updateVehicleSchema } from '../validators/driver.validator';
+import { updateLocationSchema, updateStatusSchema, createVehicleSchema, updateVehicleSchema, earningsQuerySchema } from '../validators/driver.validator';
 import * as driverService from '../services/driver.service';
 
 function handleError(res: Response, error: unknown) {
@@ -54,6 +54,16 @@ export async function updateVehicle(req: Request, res: Response) {
     if ('error' in result) {
       return res.status(404).json({ error: 'Vehicle not found' });
     }
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function getEarnings(req: Request, res: Response) {
+  try {
+    const input = earningsQuerySchema.parse(req.query);
+    const result = await driverService.getEarnings(req.user!.id, input.page);
     return res.status(200).json(result);
   } catch (error) {
     return handleError(res, error);

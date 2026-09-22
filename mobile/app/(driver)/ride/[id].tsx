@@ -12,6 +12,7 @@ import {
 } from '../../../src/services/ride';
 import { useLiveCoordinates } from '../../../src/hooks/useLiveCoordinates';
 import { RideTrackingMap } from '../../../src/components/RideTrackingMap';
+import { CallButton } from '../../../src/components/CallButton';
 import { Button } from '../../../src/components/ui/Button';
 import { RideStatusBadge } from '../../../src/components/ui/Badge';
 import { colors } from '../../../src/theme/colors';
@@ -38,6 +39,8 @@ const NEXT_ACTION: Partial<Record<Ride['status'], { label: string; action: (id: 
 // The map/GPS marker is only worth showing (and worth tracking locally)
 // during these statuses — before ACCEPTED there's nothing to navigate to yet.
 const TRACKING_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
+// The call button only makes sense once a passenger is assigned and the trip isn't over yet.
+const CALLABLE_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
 
 export default function DriverRideScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -155,6 +158,10 @@ export default function DriverRideScreen() {
             {isCompleted && ride.finalPrice !== null ? `${ride.finalPrice} FCFA (prix final)` : `${ride.estimatedPrice} FCFA`}
           </Text>
         </View>
+
+        {CALLABLE_STATUSES.includes(ride.status) && (
+          <CallButton phone={ride.passenger?.phone} label="Appeler le passager" />
+        )}
 
         {nextAction && (
           <Button

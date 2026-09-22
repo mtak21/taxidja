@@ -32,3 +32,32 @@ export async function updateVehicle(
   const { data } = await api.patch<{ vehicle: AuthUserVehicle }>(`/driver/vehicle/${id}`, input);
   return data.vehicle;
 }
+
+export interface EarningsTotals {
+  today: number;
+  week: number;
+  month: number;
+  allTime: number;
+}
+
+export interface EarningsRide {
+  id: string;
+  passenger: { firstName: string; lastName: string };
+  destinationAddress: string | null;
+  finalPrice: number | null;
+  completedAt: string | null;
+  requestedAt: string;
+}
+
+export interface EarningsResponse {
+  totals: EarningsTotals;
+  rides: EarningsRide[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function getEarnings(page = 1): Promise<EarningsResponse> {
+  const { data } = await api.get<EarningsResponse>('/driver/earnings', { params: { page } });
+  return data;
+}

@@ -20,11 +20,23 @@ export interface RideEstimate {
   routeGeometry: RoutePoint[];
 }
 
+export interface RideDriverVehicle {
+  type: VehicleType;
+  brand: string | null;
+  model: string | null;
+  plate: string | null;
+  color: string | null;
+}
+
 export interface RideDriver {
   id: string;
   firstName: string;
   lastName: string;
   rating: number;
+  avatarUrl?: string | null;
+  /** Only ever populated for this ride's own passenger/driver/an admin — same authorization as the rest of GET /rides/:id. */
+  phone?: string;
+  vehicle?: RideDriverVehicle | null;
   /** Present while a driver is assigned — seeds the live-tracking marker before the first socket update arrives. */
   currentLatitude?: number | null;
   currentLongitude?: number | null;
@@ -33,6 +45,7 @@ export interface RideDriver {
 export interface RidePassenger {
   firstName: string;
   lastName: string;
+  phone?: string;
 }
 
 export interface Ride {

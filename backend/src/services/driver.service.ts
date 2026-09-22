@@ -96,3 +96,72 @@ export async function updateVehicle(userId: string, vehicleId: string, input: Up
   const updated = await prisma.vehicle.update({ where: { id: vehicleId }, data: input });
   return { vehicle: updated };
 }
+
+const EARNINGS_PAGE_SIZE = 20;
+
+function startOfToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+// Monday-based week, matching the common convention in Chad/francophone Africa.
+function startOfWeek(): Date {
+  const start = startOfToday();
+  const day = start.getDay(); // 0 (Sun) .. 6 (Sat)
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  start.setDate(start.getDate() + diffToMonday);
+  return start;
+}
+
+function startOfMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+export async function getEarnings(userId: string, page: number) {
+  const driver = await prisma.driver.findUnique({ where: { userId } });
+  if (!driver) {
+    return {
+      totals: { today: 0, week: 0, month: 0, allTime: 0 },
+      rides: [],
+      total: 0,
+      page,
+      pageSize: EARNINGS_PAGE_SIZE,
+    };
+  }
+
+  const completedWhere = { driverId: driver.id, status: RideStatus.COMPLETED };
+
+  const [todayAgg, weekAgg, monthAgg, allTimeAgg, rawRides, total] = await prisma.$transaction([
+    prisma.ride.aggregate({ where: { ...completedWhere, completedAt: { gte: startOfToday() } }, _sum: { finalPrice: true } }),
+    prisma.ride.aggregate({ where: { ...completedWhere, completedAt: { gte: startOfWeek() } }, _sum: { finalPrice: true } }),
+    prisma.ride.aggregate({ where: { ...completedWhere, completedAt: { gte: startOfMonth() } }, _sum: { finalPrice: true } }),
+    prisma.ride.aggregate({ where: completedWhere, _sum: { finalPrice: true } }),
+    prisma.ride.findMany({
+      where: completedWhere,
+      orderBy: { completedAt: 'desc' },
+      skip: (page - 1) * EARNINGS_PAGE_SIZE,
+      take: EARNINGS_PAGE_SIZE,
+      include: { passenger: true },
+    }),
+    prisma.ride.count({ where: completedWhere }),
+  ]);
+
+  const rides = rawRides.map(({ passenger, ...rideFields }) => ({
+    ...rideFields,
+    passenger: { firstName: passenger.firstName, lastName: passenger.lastName },
+  }));
+
+  return {
+    totals: {
+      today: todayAgg._sum.finalPrice ?? 0,
+      week: weekAgg._sum.finalPrice ?? 0,
+      month: monthAgg._sum.finalPrice ?? 0,
+      allTime: allTimeAgg._sum.finalPrice ?? 0,
+    },
+    rides,
+    total,
+    page,
+    pageSize: EARNINGS_PAGE_SIZE,
+  };
+}

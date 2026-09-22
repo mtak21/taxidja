@@ -12,5 +12,6 @@ router.patch('/location', driverController.updateLocation);
 router.patch('/status', driverController.updateStatus);
 router.post('/vehicle', driverController.addVehicle);
 router.patch('/vehicle/:id', driverController.updateVehicle);
+router.get('/earnings', driverController.getEarnings);
 
 export default router;

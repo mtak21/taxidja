@@ -467,6 +467,8 @@ export function ProfileScreen() {
         )}
       </View>
 
+      {isDriver && <Button title="Mes revenus" variant="secondary" onPress={() => router.push('/(driver)/earnings')} />}
+
       <ProfileForm />
       <PasswordForm />
       {isDriver && <VehiclesSection />}
