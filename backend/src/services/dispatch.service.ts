@@ -29,7 +29,7 @@ interface DispatchState {
 
 const activeSearches = new Map<string, DispatchState>();
 
-export async function startSearch(rideId: string) {
+export async function startSearch(rideId: string, excludeDriverId?: string) {
   const ride = await prisma.ride.update({
     where: { id: rideId },
     data: { status: RideStatus.SEARCHING },
@@ -38,6 +38,7 @@ export async function startSearch(rideId: string) {
   const candidates = await findCandidates(
     { latitude: ride.pickupLatitude, longitude: ride.pickupLongitude },
     ride.vehicleType,
+    excludeDriverId,
   );
 
   activeSearches.set(rideId, {

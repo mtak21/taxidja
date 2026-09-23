@@ -49,6 +49,36 @@ export async function createRide(params: CreateRideParams) {
   });
 }
 
+const ACTIVE_STATUSES: RideStatus[] = [
+  RideStatus.REQUESTED,
+  RideStatus.SEARCHING,
+  RideStatus.ACCEPTED,
+  RideStatus.DRIVER_ARRIVING,
+  RideStatus.IN_PROGRESS,
+];
+
+/**
+ * The caller's one in-flight ride, if any — used to resume the app straight
+ * into the ride's status screen instead of Accueil after a cold start.
+ * `driverId` is scoped to that driver's own Driver profile, not the raw
+ * userId, same lookup pattern as getRideForDriverTransition.
+ */
+export async function getActiveRide(userId: string, role: UserRole) {
+  if (role === UserRole.DRIVER) {
+    const driver = await prisma.driver.findUnique({ where: { userId } });
+    if (!driver) return null;
+    return prisma.ride.findFirst({
+      where: { driverId: driver.id, status: { in: ACTIVE_STATUSES } },
+      orderBy: { requestedAt: 'desc' },
+    });
+  }
+
+  return prisma.ride.findFirst({
+    where: { passengerId: userId, status: { in: ACTIVE_STATUSES } },
+    orderBy: { requestedAt: 'desc' },
+  });
+}
+
 export async function getRideById(id: string) {
   return prisma.ride.findUnique({
     where: { id },
@@ -78,6 +108,47 @@ export async function cancelRide(id: string, passengerId: string) {
   });
 
   return { ride: updated };
+}
+
+const DRIVER_CANCELLABLE_STATUSES: RideStatus[] = [RideStatus.ACCEPTED, RideStatus.DRIVER_ARRIVING];
+
+type DriverCancelError = 'not_found' | 'not_assigned_driver' | 'not_cancellable';
+
+/**
+ * A driver backing out after accepting, but before the trip actually starts.
+ * Once IN_PROGRESS a ride can no longer be cancelled this way — it has to be
+ * completed (or handled as an exceptional case outside this flow).
+ *
+ * Unlike the passenger's cancelRide (which just marks CANCELLED), this
+ * clears driverId/acceptedAt/arrivingAt and leaves the ride's status alone;
+ * the caller (ride.controller) is expected to hand it to
+ * dispatchService.startSearch right after, which flips it to SEARCHING and
+ * re-runs the same candidate-offering flow a fresh ride goes through — see
+ * that call site for why re-search (not REQUESTED) was chosen.
+ */
+export async function cancelRideByDriver(rideId: string, userId: string) {
+  const driver = await prisma.driver.findUnique({ where: { userId } });
+  if (!driver) {
+    return { error: 'not_assigned_driver' as DriverCancelError };
+  }
+
+  const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+  if (!ride) {
+    return { error: 'not_found' as DriverCancelError };
+  }
+  if (ride.driverId !== driver.id) {
+    return { error: 'not_assigned_driver' as DriverCancelError };
+  }
+  if (!DRIVER_CANCELLABLE_STATUSES.includes(ride.status)) {
+    return { error: 'not_cancellable' as DriverCancelError };
+  }
+
+  const updated = await prisma.ride.update({
+    where: { id: rideId },
+    data: { driverId: null, acceptedAt: null, arrivingAt: null },
+  });
+
+  return { ride: updated, cancelledDriverId: driver.id };
 }
 
 type TransitionError = 'not_found' | 'not_assigned_driver' | 'invalid_transition';

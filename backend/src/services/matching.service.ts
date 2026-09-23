@@ -39,7 +39,11 @@ export interface DriverCandidate {
  * requested type, ranked best-candidate-first by the scoring heuristic
  * described above.
  */
-export async function findCandidates(pickup: Coordinates, vehicleType: VehicleType): Promise<DriverCandidate[]> {
+export async function findCandidates(
+  pickup: Coordinates,
+  vehicleType: VehicleType,
+  excludeDriverId?: string,
+): Promise<DriverCandidate[]> {
   const drivers = await prisma.driver.findMany({
     where: {
       onlineStatus: true,
@@ -51,6 +55,7 @@ export async function findCandidates(pickup: Coordinates, vehicleType: VehicleTy
       currentLongitude: { not: null },
       lastLocationUpdate: { gte: new Date(Date.now() - MAX_LOCATION_AGE_MS) },
       vehicles: { some: { type: vehicleType, isActive: true } },
+      ...(excludeDriverId ? { id: { not: excludeDriverId } } : {}),
     },
     include: { user: true },
   });

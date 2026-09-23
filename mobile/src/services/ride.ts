@@ -101,6 +101,22 @@ export async function cancelRide(id: string): Promise<Ride> {
   return data.ride;
 }
 
+export async function cancelRideByDriver(id: string): Promise<Ride> {
+  const { data } = await api.patch(`/rides/${id}/cancel-by-driver`);
+  return data.ride;
+}
+
+/** The caller's one in-flight ride, if any — just enough to redirect to its status screen; that screen fetches the full ride itself. */
+export async function getActiveRide(): Promise<{ id: string } | null> {
+  try {
+    const { data } = await api.get('/rides/active');
+    return data.ride;
+  } catch (error: any) {
+    if (error?.response?.status === 404) return null;
+    throw error;
+  }
+}
+
 export async function markArriving(id: string): Promise<Ride> {
   const { data } = await api.patch(`/rides/${id}/arriving`);
   return data.ride;
@@ -190,4 +206,9 @@ export interface DriverPositionUpdatePayload {
   rideId: string;
   latitude: number;
   longitude: number;
+}
+
+/** Payload of the `ride:cancelled_by_driver` socket event, sent to the passenger when their assigned driver backs out before the trip starts. */
+export interface DriverCancelledPayload {
+  rideId: string;
 }

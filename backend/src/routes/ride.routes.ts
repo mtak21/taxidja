@@ -14,8 +14,11 @@ router.use(authMiddleware);
 router.post('/estimate', requireRole(UserRole.PASSENGER, UserRole.DRIVER), rideController.estimateRide);
 router.post('/', requireRole(UserRole.PASSENGER), rideController.createRide);
 router.get('/history', rideController.getHistory);
+// Must come before '/:id' — otherwise "active" would be parsed as a ride id.
+router.get('/active', rideController.getActiveRide);
 router.get('/:id', rideController.getRide);
 router.patch('/:id/cancel', requireRole(UserRole.PASSENGER), rideController.cancelRide);
+router.patch('/:id/cancel-by-driver', requireRole(UserRole.DRIVER), rideController.cancelRideByDriver);
 router.patch('/:id/arriving', requireRole(UserRole.DRIVER), rideController.markArriving);
 router.patch('/:id/start', requireRole(UserRole.DRIVER), rideController.startRide);
 router.patch('/:id/complete', requireRole(UserRole.DRIVER), rideController.completeRide);

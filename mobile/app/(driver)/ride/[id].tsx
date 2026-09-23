@@ -6,6 +6,7 @@ import {
   markArriving,
   startRide,
   completeRide,
+  cancelRideByDriver,
   estimateRide,
   type Ride,
   type RoutePoint,
@@ -41,12 +42,15 @@ const NEXT_ACTION: Partial<Record<Ride['status'], { label: string; action: (id: 
 const TRACKING_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
 // The call button only makes sense once a passenger is assigned and the trip isn't over yet.
 const CALLABLE_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING', 'IN_PROGRESS'];
+// A driver can back out before picking up the passenger, not once the trip is under way.
+const DRIVER_CANCELLABLE_STATUSES: Ride['status'][] = ['ACCEPTED', 'DRIVER_ARRIVING'];
 
 export default function DriverRideScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [ride, setRide] = useState<Ride | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [waypointRoute, setWaypointRoute] = useState<RoutePoint[] | null>(null);
 
   const loadRide = useCallback(async () => {
@@ -106,6 +110,27 @@ export default function DriverRideScreen() {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleCancelRide = () => {
+    Alert.alert('Annuler la course ?', 'Le passager sera notifié et un autre conducteur sera recherché.', [
+      { text: 'Non', style: 'cancel' },
+      {
+        text: 'Oui, annuler',
+        style: 'destructive',
+        onPress: async () => {
+          setIsCancelling(true);
+          try {
+            await cancelRideByDriver(id);
+            router.replace('/(driver)');
+          } catch {
+            Alert.alert('Erreur', "Impossible d'annuler la course.");
+          } finally {
+            setIsCancelling(false);
+          }
+        },
+      },
+    ]);
   };
 
   if (loading) {
@@ -169,6 +194,16 @@ export default function DriverRideScreen() {
             onPress={handleNextAction}
             disabled={isUpdating}
             loading={isUpdating}
+          />
+        )}
+
+        {DRIVER_CANCELLABLE_STATUSES.includes(ride.status) && (
+          <Button
+            title={isCancelling ? 'Annulation...' : 'Annuler la course'}
+            variant="danger"
+            onPress={handleCancelRide}
+            disabled={isCancelling}
+            loading={isCancelling}
           />
         )}
 

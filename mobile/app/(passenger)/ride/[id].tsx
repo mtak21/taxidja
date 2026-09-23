@@ -13,6 +13,7 @@ import {
   type RideLifecyclePayload,
   type RideCompletedPayload,
   type DriverPositionUpdatePayload,
+  type DriverCancelledPayload,
 } from '../../../src/services/ride';
 import type { Coordinates } from '../../../src/hooks/useLocation';
 import { connectSocket, disconnectSocket } from '../../../src/services/socket';
@@ -63,6 +64,7 @@ export default function RideStatusScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [noDriverMessage, setNoDriverMessage] = useState(false);
+  const [driverCancelledMessage, setDriverCancelledMessage] = useState(false);
   const [driverPosition, setDriverPosition] = useState<Coordinates | null>(null);
   const [ratingScore, setRatingScore] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
@@ -96,12 +98,21 @@ export default function RideStatusScreen() {
     const handleAssigned = (payload: DriverAssignedPayload) => {
       if (payload.rideId !== id) return;
       setEtaMinutes(payload.etaMinutes);
+      setDriverCancelledMessage(false);
       loadRide();
     };
 
     const handleNoDriver = (payload: RideLifecyclePayload) => {
       if (payload.rideId !== id) return;
       setNoDriverMessage(true);
+      loadRide();
+    };
+
+    const handleDriverCancelled = (payload: DriverCancelledPayload) => {
+      if (payload.rideId !== id) return;
+      setDriverCancelledMessage(true);
+      setDriverPosition(null);
+      setEtaMinutes(null);
       loadRide();
     };
 
@@ -141,6 +152,7 @@ export default function RideStatusScreen() {
 
     socket.on('ride:driver_assigned', handleAssigned);
     socket.on('ride:no_driver_available', handleNoDriver);
+    socket.on('ride:cancelled_by_driver', handleDriverCancelled);
     socket.on('ride:arriving', handleArriving);
     socket.on('ride:started', handleStarted);
     socket.on('ride:completed', handleCompleted);
@@ -149,6 +161,7 @@ export default function RideStatusScreen() {
     return () => {
       socket.off('ride:driver_assigned', handleAssigned);
       socket.off('ride:no_driver_available', handleNoDriver);
+      socket.off('ride:cancelled_by_driver', handleDriverCancelled);
       socket.off('ride:arriving', handleArriving);
       socket.off('ride:started', handleStarted);
       socket.off('ride:completed', handleCompleted);
@@ -236,7 +249,11 @@ export default function RideStatusScreen() {
             <ActivityIndicator size="large" color={colors.primary} style={styles.spinner} />
           )}
           <RideStatusBadge status={ride.status} />
-          <Text style={styles.statusText}>{STATUS_LABELS[ride.status]}</Text>
+          <Text style={styles.statusText}>
+            {SEARCHING_STATUSES.includes(ride.status) && driverCancelledMessage
+              ? "Le conducteur a annulé — recherche d'un nouveau conducteur..."
+              : STATUS_LABELS[ride.status]}
+          </Text>
           {ride.status === 'CANCELLED' && noDriverMessage && (
             <Text style={styles.noDriverText}>Aucun conducteur disponible pour le moment. Réessaie dans quelques minutes.</Text>
           )}

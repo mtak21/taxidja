@@ -58,6 +58,18 @@ export async function createRide(req: Request, res: Response) {
   }
 }
 
+export async function getActiveRide(req: Request, res: Response) {
+  try {
+    const ride = await rideService.getActiveRide(req.user!.id, req.user!.role);
+    if (!ride) {
+      return res.status(404).json({ error: 'No active ride' });
+    }
+    return res.status(200).json({ ride });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
 export async function getRide(req: Request, res: Response) {
   try {
     const ride = await rideService.getRideById(req.params.id as string);
@@ -127,6 +139,36 @@ export async function cancelRide(req: Request, res: Response) {
     }
 
     dispatchService.cancelSearch(req.params.id as string);
+
+    return res.status(200).json({ ride: result.ride });
+  } catch (error) {
+    return handleError(res, error);
+  }
+}
+
+export async function cancelRideByDriver(req: Request, res: Response) {
+  try {
+    const result = await rideService.cancelRideByDriver(req.params.id as string, req.user!.id);
+
+    if ('error' in result) {
+      if (result.error === 'not_found') {
+        return res.status(404).json({ error: 'Ride not found' });
+      }
+      if (result.error === 'not_assigned_driver') {
+        return res.status(403).json({ error: 'You are not the assigned driver for this ride' });
+      }
+      return res.status(409).json({ error: 'Ride can no longer be cancelled by the driver' });
+    }
+
+    getIo().to(userRoom(result.ride.passengerId)).emit('ride:cancelled_by_driver', { rideId: result.ride.id });
+
+    // Reuses the exact same candidate-offering flow a fresh ride goes
+    // through, excluding the driver who just backed out — see
+    // rideService.cancelRideByDriver's docstring for why this was chosen
+    // over reverting to REQUESTED.
+    dispatchService.startSearch(result.ride.id, result.cancelledDriverId).catch((error) => {
+      console.error(`Dispatch re-search failed for ride ${result.ride.id}:`, error);
+    });
 
     return res.status(200).json({ ride: result.ride });
   } catch (error) {
