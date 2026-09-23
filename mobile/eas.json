@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.2.122:3000"
+        "EXPO_PUBLIC_API_URL": "https://taxidja-backend.onrender.com"
       }
     },
     "production": {

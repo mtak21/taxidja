@@ -51,6 +51,8 @@ async function main() {
     create: { cityId: city.id, name: 'Centre-ville' },
     update: {},
   });
+
+  console.log(`Seed complete: admin (${ADMIN_EMAIL}), city "${city.name}", pricing config for ${Object.keys(PRICING).length} vehicle types.`);
 }
 
 main()
