@@ -1,0 +1,31 @@
+databases:
+  - name: taxidja-db
+    databaseName: taxidja
+    user: taxidja
+    plan: free
+
+services:
+  - type: web
+    name: taxidja-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taxidja-db
+          property: connectionString
+      # Generated fresh by Render at deploy time — never the local .env values.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 30d
